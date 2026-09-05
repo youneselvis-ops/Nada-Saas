@@ -1,5 +1,14 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Scénario E2E manquant : consultation du bilan mensuel (section 11)
+En vérifiant méthodiquement la couverture de test face à la liste explicite de la section 11 (5 scénarios E2E nommés), un écart réel est apparu : seuls 4 des 5 scénarios existaient (`login.spec.ts` pour l'inscription, `pipeline.spec.ts` pour l'upload/revue et la correction de ligne, `inventory.spec.ts` pour le geste « mangé »). Le cinquième — « consultation du bilan mensuel » — n'avait tout simplement aucun test, alors que la fonctionnalité elle-même (phase 6) est bien implémentée et déployée.
+
+**Corrigé :** `tests/e2e/dashboard.spec.ts` — connecte un utilisateur de test, importe un ticket, marque un article comme « mangé » (pour générer un montant réellement sauvé ce mois-ci), visite `/dashboard`, et vérifie que le titre, le libellé du montant sauvé et le lien de téléchargement de l'image partageable sont bien visibles. Même convention que les specs existantes (`signInAsTestUser`, `test.skip` si `SUPABASE_SERVICE_ROLE_KEY` absente).
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104, inchangés — le nouveau test est e2e) build ✅. e2e non exécutable dans ce sandbox (même blocage réseau que documenté depuis la phase 2), mais le fichier est syntaxiquement valide et suit exactement le patron des specs déjà en place.
+
+**Suivant :** les 5 scénarios E2E de la section 11 sont maintenant tous couverts par du code. Continuer à guetter la PR ; chercher d'autres écarts entre le cahier des charges et l'implémentation réelle si le temps le permet.
+
 ## 2026-09-05 — Audit complet de la section 10 : cible tactile 44px et casse de phrase
 Suite du même audit de conformité que les deux écarts précédents (Martian Mono, contraste AA). Deux points de la section 10 restaient vérifiés seulement par lecture, jamais par un contrôle systématique : « cible tactile de 44px minimum » sur *tous* les éléments interactifs, et « casse de phrase partout, aucune majuscule décorative ».
 
