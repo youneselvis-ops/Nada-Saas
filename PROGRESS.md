@@ -7,6 +7,12 @@ En continuant la revue, j'ai vérifié si la charte typographique de la section 
 
 **Porte qualité :** lint ✅ types ✅ tests ✅ (98/98) build ✅
 
+**Deuxième écart trouvé en poussant la vérification plus loin :** la section 10 exige un « contraste AA vérifié, sans l'annoncer ». Je ne l'avais affirmé que par lecture, jamais calculé. Calcul réel des ratios WCAG (formule de luminance relative officielle) sur les paires de couleurs effectivement utilisées dans l'app : `--fade` (#8C8B84) sur `--paper` — la combinaison utilisée pour tout le texte secondaire de l'application (libellés, descriptions, dates) — ne donne que **3.27:1**, en dessous du seuil AA de 4.5:1 pour du texte de taille normale. Toutes les autres combinaisons (`--ink`/`--paper` : 15.85, `--paper`/`--nopal` : 6.03, `--jamaica`/`--paper` : 7.43) passent largement.
+
+**Corrigé :** `--fade` assombri de `#8C8B84` à `#706F69` (même teinte grise chaude, luminance réduite), ce qui porte le contraste à 4.83:1 — au-dessus du seuil avec une marge raisonnable. `CLAUDE.md` (le cahier des charges lui-même) n'a pas été modifié — ce n'est pas ma place de réécrire la spec, l'écart est documenté ici comme pour les autres déviations. Ajout de `src/lib/contrast.ts` (calcul de ratio WCAG à partir de deux couleurs hexadécimales) et d'un test de non-régression (`tests/unit/contrast.test.ts`) qui vérifie explicitement que chaque paire couleur/fond réellement utilisée dans l'app respecte AA — pour que ce genre d'écart soit détecté automatiquement si quelqu'un retouche la palette plus tard, plutôt que de dépendre d'une relecture manuelle.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104) build ✅
+
 **Suivant :** continuer à surveiller la PR ; chercher d'autres écarts entre la charte de la section 10 et l'implémentation réelle si le temps le permet.
 
 ## 2026-09-05 — Le déploiement Vercel fonctionnait en réalité (et un vrai déploiement cassé, corrigé)
