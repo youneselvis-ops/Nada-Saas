@@ -4,16 +4,11 @@ import {
   monthBounds,
   topWastedProducts,
 } from "@/lib/monthly-summary";
+import { FADE, INK, JAMAICA, NOPAL, PAPER, SAND } from "@/lib/palette";
 import { createClient } from "@/lib/supabase/server";
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
-
-const PAPER = "#fbfaf6";
-const INK = "#16211c";
-const NOPAL = "#2f6b4f";
-const JAMAICA = "#a3123a";
-const FADE = "#8c8b84";
 
 function formatCurrency(amount: number, currency: string): string {
   const symbol = currency === "EUR" ? "€" : "$";
@@ -105,7 +100,7 @@ export async function GET() {
                   color: INK,
                   paddingTop: 20,
                   paddingBottom: 20,
-                  borderTop: "2px solid #e9e3d6",
+                  borderTop: `2px solid ${SAND}`,
                 }}
               >
                 <div style={{ display: "flex" }}>{product.product_name}</div>

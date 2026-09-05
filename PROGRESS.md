@@ -1,5 +1,14 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Régression trouvée : l'image de bilan partageable avait gardé l'ancienne couleur non conforme AA
+En vérifiant les autres routes de l'API par la même méthode que les bugs précédents, j'ai relu `src/app/api/summary/image/route.tsx` (l'image 1080×1920 générée par `next/og` pour la phase 6) et remarqué qu'elle définit sa propre copie de la palette en constantes hexadécimales locales — nécessaire puisque `next/og` ne peut pas consommer les classes Tailwind ni les variables CSS. Cette copie contenait encore `const FADE = "#8c8b84"`, la valeur **d'avant** la correction WCAG AA de cette session (`globals.css` avait été corrigé en `#706f69`, voir l'entrée plus bas). Un vrai oubli de synchronisation : les libellés « ahorrado este mes »/« perdido este mes » sur l'image partageable restaient sous le seuil de contraste AA (3.27:1) alors que l'équivalent à l'écran avait déjà été corrigé.
+
+**Corrigé :** extraction de la palette dans un module partagé unique `src/lib/palette.ts` (avec un commentaire expliquant pourquoi cette duplication existe), `route.tsx` importe désormais ces constantes au lieu de les redéfinir. Ajout de `tests/unit/palette.test.ts`, qui lit `globals.css` directement et vérifie que chaque valeur de `palette.ts` correspond exactement à la variable CSS `--*` correspondante — pour que ce type de dérive (une palette corrigée à un endroit mais oubliée dans sa copie dupliquée) ne puisse plus jamais passer inaperçu.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (122/122, +6 nouveaux) build ✅
+
+**Suivant :** continuer à guetter la PR.
+
 ## 2026-09-05 — Bug de confidentialité trouvé : la suppression de compte n'effaçait jamais les photos de ticket
 La section 16 est explicite et sans ambiguïté : « Suppression de compte fonctionnelle... elle efface les lignes **et** les fichiers Storage » — et insiste sur le fait qu'un ticket de caisse est une donnée personnelle sensible. En comparant le code d'upload (`src/app/receipts/new/page.tsx`) et le code de suppression (`src/app/api/account/delete/route.ts`), j'ai trouvé un vrai bug : les images sont stockées à `{user_id}/{receipt_id}/{n}.jpg` (un niveau sous le préfixe utilisateur), mais la route de suppression appelait `admin.storage.from("receipts").list(user.id)` — `list()` n'est **pas récursif** dans Supabase Storage, donc cet appel ne retournait que les pseudo-dossiers `{receipt_id}` eux-mêmes, pas les fichiers à l'intérieur. Le code construisait ensuite `${user.id}/${file.name}` = `{user_id}/{receipt_id}` — un préfixe de dossier, pas une vraie clé d'objet — et le passait à `.remove()`, qui ne supprime que des clés exactes. Résultat : **aucune photo de ticket n'était jamais réellement effacée**, alors que la route retournait `{ok: true}` et que l'utilisateur croyait sa suppression complète.
 
