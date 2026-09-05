@@ -4,7 +4,8 @@
     "loading": "Cargando...",
     "save": "Guardar",
     "cancel": "Cancelar",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "inventoryNavLabel": "Inventario"
   },
   "login": {
     "title": "Entra a tu cocina",
@@ -55,6 +56,16 @@
     "failedTitle": "No pudimos leer este ticket",
     "failedSubtitle": "Intenta con una foto más clara y bien iluminada.",
     "retry": "Volver a intentar"
+  },
+  "inventory": {
+    "urgentValueLabel": "en riesgo de perderse",
+    "zoneUrgent": "Se echa a perder en 48 horas",
+    "zoneSoon": "Se echa a perder en 5 días",
+    "zoneLater": "Más adelante",
+    "markEaten": "Comí",
+    "markWasted": "Tiré",
+    "emptyTitle": "Tu inventario está vacío",
+    "emptySubtitle": "Fotografía un ticket para empezar."
   },
   "review": {
     "title": "Revisa tu inventario",

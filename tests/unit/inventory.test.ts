@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { computeExpiresAt, daysForStorage } from "@/lib/inventory";
+import {
+  computeExpiresAt,
+  daysForStorage,
+  daysUntil,
+  expiryZone,
+} from "@/lib/inventory";
 
 describe("computeExpiresAt", () => {
   it("adds days for fridge storage", () => {
@@ -46,5 +51,42 @@ describe("daysForStorage", () => {
     expect(
       daysForStorage("freezer", { days_fridge: 7, days_pantry: 45, days_freezer: null }),
     ).toBeNull();
+  });
+});
+
+describe("daysUntil", () => {
+  it("counts whole days ahead", () => {
+    expect(daysUntil("2026-09-10", "2026-09-01")).toBe(9);
+  });
+
+  it("is zero for today", () => {
+    expect(daysUntil("2026-09-01", "2026-09-01")).toBe(0);
+  });
+
+  it("is negative when already expired", () => {
+    expect(daysUntil("2026-08-30", "2026-09-01")).toBe(-2);
+  });
+});
+
+describe("expiryZone", () => {
+  it("classifies today as urgent", () => {
+    expect(expiryZone("2026-09-01", "2026-09-01")).toBe("urgent");
+  });
+
+  it("classifies 2 days out as urgent (under 48h)", () => {
+    expect(expiryZone("2026-09-03", "2026-09-01")).toBe("urgent");
+  });
+
+  it("classifies 3 to 5 days out as soon", () => {
+    expect(expiryZone("2026-09-04", "2026-09-01")).toBe("soon");
+    expect(expiryZone("2026-09-06", "2026-09-01")).toBe("soon");
+  });
+
+  it("classifies beyond 5 days as later", () => {
+    expect(expiryZone("2026-09-07", "2026-09-01")).toBe("later");
+  });
+
+  it("classifies already-expired items as urgent", () => {
+    expect(expiryZone("2026-08-30", "2026-09-01")).toBe("urgent");
   });
 });

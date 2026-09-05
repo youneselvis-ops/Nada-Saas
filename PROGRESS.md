@@ -1,5 +1,24 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Phase 3 : L'inventaire vivant
+**Fait :**
+- Écran `/inventory` : liste dense triée par `expires_at` croissant, une règle horizontale fine entre les articles, date alignée à droite — pas de grille de cartes.
+- Trois zones calculées côté client (`expiryZone` dans `src/lib/inventory.ts`, testée unitairement) : périme sous 48h (≤2 jours, y compris déjà périmé), sous 5 jours, plus tard. Aucune couleur décorative — le rouge (`--jamaica`) n'apparaît que sur le compteur de valeur en péremption et le bouton « jeté », conformément à la charte.
+- Compteur permanent en très grand de la valeur totale des articles qui périment sous 48h, affiché seulement s'il y a quelque chose d'urgent.
+- Actions à un geste : « Comí »/« Mangé » et « Tiré »/« Jeté » sur chaque ligne, sans confirmation — mise à jour immédiate de `inventory_items.status` (`consumed`/`wasted`) + `resolved_at`, avec une transition d'opacité courte (200ms, désactivée par `prefers-reduced-motion` via la règle globale déjà en place) avant que la ligne ne quitte la liste.
+- Lien « Inventario »/« Inventaire » ajouté à la navigation du layout `(app)`.
+- Tests unitaires pour `daysUntil`/`expiryZone` (limites 48h/5 jours, articles déjà expirés). Test e2e structuré (`tests/e2e/inventory.spec.ts`) pour le geste unique « mangé » — même limitation réseau que les autres e2e (voir phase 2).
+
+**Décisions techniques :**
+- Aucune nouvelle migration nécessaire : les policies RLS et la table `inventory_items` de la phase 1 couvrent déjà `update`/lecture par propriétaire.
+- Zones calculées en JavaScript à la lecture plutôt qu'en SQL — plus simple à tester unitairement et suffisant vu le volume d'articles par utilisateur.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (66/66) e2e ⚠️ (même blocage réseau que phase 2) build ✅ deploy ⏳ advisors ✅ (aucun changement de schéma) runtime ⏳
+
+**Bloqué sur :** rien de nouveau — mêmes blocages qu'aux phases 1-2 (secrets tiers, déploiement Vercel à vérifier).
+
+**Suivant :** phase 4 — les alertes (cron quotidien, email Resend, anti-doublon).
+
 ## 2026-09-05 — Phase 2 : Le pipeline
 **Fait :**
 - Écran de capture (`/receipts/new`) : appareil photo (`capture="environment"`) ou import multi-fichiers, compression client (canvas, 1600px max, JPEG qualité 0.8) avant envoi.

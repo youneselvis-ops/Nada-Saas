@@ -4,7 +4,8 @@
     "loading": "Chargement...",
     "save": "Enregistrer",
     "cancel": "Annuler",
-    "settings": "Réglages"
+    "settings": "Réglages",
+    "inventoryNavLabel": "Inventaire"
   },
   "login": {
     "title": "Entre dans ta cuisine",
@@ -55,6 +56,16 @@
     "failedTitle": "Impossible de lire ce ticket",
     "failedSubtitle": "Réessaie avec une photo plus nette et bien éclairée.",
     "retry": "Réessayer"
+  },
+  "inventory": {
+    "urgentValueLabel": "en risque de se perdre",
+    "zoneUrgent": "Périme sous 48 heures",
+    "zoneSoon": "Périme sous 5 jours",
+    "zoneLater": "Plus tard",
+    "markEaten": "Mangé",
+    "markWasted": "Jeté",
+    "emptyTitle": "Ton inventaire est vide",
+    "emptySubtitle": "Photographie un ticket pour commencer."
   },
   "review": {
     "title": "Vérifie ton inventaire",
