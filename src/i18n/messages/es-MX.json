@@ -39,6 +39,10 @@
   },
   "settings": {
     "title": "Ajustes",
+    "languageTitle": "Idioma y moneda",
+    "languageMx": "Español (México) — MXN",
+    "languageFr": "Français (France) — EUR",
+    "languageUpdating": "Cambiando...",
     "enableNotifications": "Activar notificaciones",
     "notificationsEnabled": "Notificaciones activadas",
     "notificationsDenied": "No activaste las notificaciones.",

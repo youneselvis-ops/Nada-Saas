@@ -1,5 +1,14 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Écart fonctionnel réel trouvé : impossible de passer au marché français
+En cherchant d'autres écarts après l'audit design/tests, j'ai vérifié un point jamais testé jusqu'ici : la section 1 nomme explicitement la France (`fr-FR`) comme second marché, et `profiles.locale`/`profiles.currency` pilotent réellement du comportement métier (langue des emails Resend, langue de la recette générée, texte de l'image de bilan mensuel — vérifié par grep sur les usages réels de `profile.locale`, pas supposé). Mais **aucun écran de l'application ne permettait de changer ces valeurs** : la locale était lue uniquement depuis un cookie `NEXT_LOCALE` (`src/i18n/request.ts`), jamais écrit nulle part ; tout profil restait donc bloqué sur `es-MX`/`MXN` par défaut à vie. Un utilisateur français n'avait aucun moyen d'utiliser l'app dans sa langue — un vrai manque fonctionnel, pas un détail cosmétique, puisqu'il rend le second marché du produit inutilisable en pratique.
+
+**Corrigé :** ajout d'un sélecteur langue/devise dans `/settings` — deux boutons (« Español (México) — MXN » / « Français (France) — EUR »), qui au clic mettent à jour `profiles.locale`/`profiles.currency` en base **et** écrivent le cookie `NEXT_LOCALE`, puis rechargent la page pour que `next-intl` et tous les textes serveur reflètent le nouveau choix immédiatement. Nouvelles clés i18n (`languageTitle`, `languageMx`, `languageFr`, `languageUpdating`) ajoutées aux deux dictionnaires, en gardant les noms de langue non traduits entre eux (convention standard d'un sélecteur de langue : chaque option s'affiche dans sa propre langue, pas dans celle actuellement active).
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104, inchangés — logique triviale de correspondance locale→devise, pas de logique métier nouvelle à isoler) build ✅
+
+**Suivant :** continuer à guetter la PR ; chercher d'autres écarts fonctionnels réels (pas seulement esthétiques) si le temps le permet.
+
 ## 2026-09-05 — Scénario E2E manquant : consultation du bilan mensuel (section 11)
 En vérifiant méthodiquement la couverture de test face à la liste explicite de la section 11 (5 scénarios E2E nommés), un écart réel est apparu : seuls 4 des 5 scénarios existaient (`login.spec.ts` pour l'inscription, `pipeline.spec.ts` pour l'upload/revue et la correction de ligne, `inventory.spec.ts` pour le geste « mangé »). Le cinquième — « consultation du bilan mensuel » — n'avait tout simplement aucun test, alors que la fonctionnalité elle-même (phase 6) est bien implémentée et déployée.
 
