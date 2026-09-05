@@ -106,7 +106,7 @@ export default function LoginPage() {
           </Button>
           <button
             type="button"
-            className="text-sm text-fade underline underline-offset-2"
+            className="flex min-h-11 items-center text-sm text-fade underline underline-offset-2"
             onClick={() => setStep("email")}
           >
             {t("backToEmail")}

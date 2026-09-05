@@ -1,5 +1,20 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Audit complet de la section 10 : cible tactile 44px et casse de phrase
+Suite du même audit de conformité que les deux écarts précédents (Martian Mono, contraste AA). Deux points de la section 10 restaient vérifiés seulement par lecture, jamais par un contrôle systématique : « cible tactile de 44px minimum » sur *tous* les éléments interactifs, et « casse de phrase partout, aucune majuscule décorative ».
+
+**Casse de phrase :** grep systématique sur les deux dictionnaires i18n (`es-MX.json`, `fr-FR.json`) à la recherche de séquences en majuscules — rien trouvé en dehors de lettres accentuées en début de phrase (faux positifs de la regex). Seule majuscule décorative de tout le code : le littéral `TOTAL` dans `receipt-ticket.tsx`, qui est exactement l'exception que la section 10 prévoit elle-même (vernaculaire du ticket de caisse, à l'intérieur du composant Martian Mono, nulle part ailleurs). Conforme, aucun changement nécessaire.
+
+**Cible tactile 44px :** recensement de tous les éléments interactifs (`<button>`, `<Link>`, `<input>`, composant `Button`) dans `src/`. Le composant `Button` a `min-h-11` dans ses classes de base (s'applique à toutes les variantes). Tous les `<button>`/`<Link>` bruts en ont un aussi — sauf un : le bouton « revenir à l'email » sur l'écran de code OTP (`src/app/login/page.tsx`), qui n'avait que `text-sm text-fade underline underline-offset-2`, sans hauteur minimale. Un vrai écart, pas un faux positif : c'est le seul élément interactif de toute l'app sous la barre des 44px.
+
+**Corrigé :** ajout de `flex min-h-11 items-center` à ce bouton, pour respecter la cible tactile tout en gardant le texte centré verticalement dans la zone cliquable.
+
+**Vérifié en plus (pas un écart) :** le retrait de focus (`outline-none` sur `Input`, seul usage dans tout le code) ne supprime pas le focus clavier visible — la règle globale `:focus-visible { outline: 2px solid var(--nopal) }` dans `globals.css` est écrite en CSS non calqué (« unlayered »), donc prioritaire sur les utilitaires Tailwind qui vivent dans `@layer utilities` selon les règles de cascade CSS, peu importe l'ordre des classes. `Input` a en plus son propre indicateur de remplacement (`focus-visible:border-nopal`). Conforme.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104) build ✅
+
+**Suivant :** audit de la section 10 maintenant complet (patterns génériques bannis, Martian Mono, contraste AA, cible tactile, casse de phrase) — continuer à guetter le déploiement Vercel et d'autres écarts si le temps le permet.
+
 ## 2026-09-05 — Composant manquant : le ticket en Martian Mono (section 10)
 En continuant la revue, j'ai vérifié si la charte typographique de la section 10 était vraiment respectée : « Martian Mono exclusivement à l'intérieur du composant qui affiche le ticket extrait ». La police était bien chargée (`layout.tsx`, variable `--font-martian-mono`) et déclarée comme token Tailwind (`font-receipt`), mais **jamais utilisée nulle part** — aucun composant n'affichait le ticket extrait dans son vernaculaire propre. Un vrai manque, pas une simple finition.
 
