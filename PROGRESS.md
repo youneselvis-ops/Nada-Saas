@@ -1,5 +1,21 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Le déploiement Vercel fonctionnait en réalité (et un vrai déploiement cassé, corrigé)
+Coup de théâtre en lisant les notifications GitHub en attente sur la PR : l'intégration Vercel↔GitHub **fonctionnait depuis le début**. Chaque push sur la branche a bien déclenché un déploiement pour les projets `nada` et `nada-app` (créés lors du diagnostic précédent), avec des statuts « Ready » visibles dans les commentaires automatiques de `vercel[bot]` sur la PR — `https://nada-sigma-two.vercel.app` et `https://nada-app.vercel.app` sont de vraies URL de prévisualisation actives. Le blocage précédemment diagnostiqué (connecteur MCP Vercel en écriture seule, sans lecture) était réel mais concernait uniquement les outils `get_project`/`get_deployment`/etc. utilisés *depuis cette session* — pas l'intégration GitHub elle-même, qui est un mécanisme entièrement séparé côté Vercel et n'a jamais été affectée.
+
+**Mais un vrai problème est apparu :** les deux derniers commentaires de `vercel[bot]` avant cette découverte annoncent un **échec de déploiement** sur les deux projets : « Hobby accounts are limited to daily cron jobs. This cron expression (0 * * * *) would run more than once per day. » — le cron horaire des alertes d'expiration (migration/commit de la phase 4) dépasse la limite du palier gratuit Vercel, et fait donc échouer **tout le déploiement**, pas seulement la fonctionnalité cron.
+
+**Corrigé immédiatement (c'est un CI rouge sur une PR que j'ai ouverte, donc à traiter tout de suite, pas à contourner) :**
+- `vercel.json` : le cron `/api/cron/expiry-alerts` passe de `0 * * * *` (toutes les heures) à `0 23 * * *` (une fois par jour, à 23h UTC = 17h heure de Mexico, le marché prioritaire selon la section 1 du cahier des charges).
+- `src/app/api/cron/expiry-alerts/route.ts` : suppression du filtre `isAlertHour` par profil. Sur un cron unique quotidien à heure UTC fixe, ce filtre aurait silencieusement exclu **tous** les utilisateurs dont le fuseau horaire ne correspond pas exactement à cet instant — c'est-à-dire tous les utilisateurs fr-FR, qui n'auraient alors **jamais** reçu d'alerte. Tous les profils sont maintenant traités à chaque exécution ; l'anti-doublon (`notifications_log`, clé unique par jour local) continue de garantir un seul envoi par jour et par utilisateur.
+- La fonction `isAlertHour` reste dans `src/lib/notifications.ts`, toujours testée unitairement, documentée comme prête à être réactivée si le projet passe un jour sur un palier Vercel autorisant un cron horaire (Pro).
+
+**Compromis produit assumé, pas caché :** avec un cron gratuit unique par jour, il est mathématiquement impossible de notifier deux fuseaux horaires différents à 17h locale pile pour chacun. Les utilisateurs mexicains sont notifiés exactement à 17h ; les utilisateurs français reçoivent leur alerte une fois par jour aussi, mais à une heure locale décalée (autour de minuit/1h du matin en hiver/été). C'est un vrai écart avec la lettre du cahier des charges (section 9, phase 4 : « 17h heure locale de l'utilisateur »), imposé par une contrainte d'infrastructure gratuite, pas par choix. Revenir à une précision parfaite pour les deux marchés nécessiterait soit un palier Vercel payant (décision qui coûte de l'argent — à l'humain de trancher), soit un mécanisme de cron externe déclenchant l'API via un service tiers gratuit à fréquence plus fine.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (98/98, inchangés) build ✅ — poussé immédiatement pour rétablir un déploiement fonctionnel.
+
+**Suivant :** une fois ce correctif déployé avec succès, vérifier réellement les URLs `nada-sigma-two.vercel.app` / `nada-app.vercel.app` avec `web_fetch_vercel_url` — ce qui était impossible à faire depuis les outils de cette session jusqu'ici, mais devient enfin possible maintenant que je sais que ces URLs existent et sont correctes.
+
 ## 2026-09-05 — Test d'intégration RLS (obligatoire, section 11) + bug réel trouvé et corrigé
 En attendant que le connecteur Vercel soit réparé côté compte, j'ai fait le travail de vérification que je pouvais réellement faire : le test d'intégration RLS inter-utilisateurs explicitement marqué « obligatoire et non négociable » en section 11, que j'avais seulement justifié par lecture du code jusqu'ici, jamais exécuté pour de vrai.
 

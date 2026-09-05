@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
 import { computeExpiresAt } from "@/lib/inventory";
 import { sendExpiryAlertEmail } from "@/lib/email";
-import { isAlertHour, localDateKey } from "@/lib/notifications";
+import { localDateKey } from "@/lib/notifications";
 import { sendPushToUser } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const EXPIRY_WINDOW_DAYS = 2;
 
+// Vercel's Hobby plan only allows daily (not hourly) cron jobs, so this runs
+// once a day at 23:00 UTC — 17:00 in America/Mexico_City, the priority
+// market (CLAUDE.md section 1). Every profile is processed on this single
+// run regardless of its own timezone: gating on each user's exact local
+// hour (as the spec literally asks for) would silently skip every
+// non-Mexico timezone on a once-a-day schedule, since their local 17:00
+// never coincides with this fixed UTC instant. fr-FR users get one alert
+// daily too, just not at their own 17:00 — revisit with a per-timezone
+// hourly cron (see `isAlertHour` in lib/notifications.ts, still exported
+// and tested) if the project moves to a Vercel plan that allows it.
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -27,8 +37,6 @@ export async function GET(request: Request) {
   let alerted = 0;
 
   for (const profile of profiles) {
-    if (!isAlertHour(profile.timezone, now)) continue;
-
     const today = localDateKey(profile.timezone, now);
     const threshold = computeExpiresAt(today, EXPIRY_WINDOW_DAYS);
 
