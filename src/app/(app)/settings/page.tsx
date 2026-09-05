@@ -3,11 +3,20 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { isPushSupported, subscribeToPush } from "@/lib/push-client";
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [notifStatus, setNotifStatus] = useState<"idle" | "enabled" | "denied">(
+    "idle",
+  );
+
+  async function handleEnableNotifications() {
+    const enabled = await subscribeToPush();
+    setNotifStatus(enabled ? "enabled" : "denied");
+  }
 
   async function handleDelete() {
     setLoading(true);
@@ -21,6 +30,21 @@ export default function SettingsPage() {
   return (
     <main className="flex flex-col gap-6 px-4 py-8">
       <h1 className="text-xl font-medium text-ink">{t("title")}</h1>
+
+      {isPushSupported() ? (
+        <div className="flex flex-col items-start gap-3 border-t border-sand pt-6">
+          {notifStatus === "enabled" ? (
+            <p className="text-nopal">{t("notificationsEnabled")}</p>
+          ) : notifStatus === "denied" ? (
+            <p className="text-fade">{t("notificationsDenied")}</p>
+          ) : (
+            <Button variant="outline" onClick={handleEnableNotifications}>
+              {t("enableNotifications")}
+            </Button>
+          )}
+        </div>
+      ) : null}
+
       <div className="flex flex-col items-start gap-3 border-t border-sand pt-6">
         <p className="text-fade">{t("deleteAccountDescription")}</p>
         {confirming ? (

@@ -34,6 +34,9 @@
   },
   "settings": {
     "title": "Ajustes",
+    "enableNotifications": "Activar notificaciones",
+    "notificationsEnabled": "Notificaciones activadas",
+    "notificationsDenied": "No activaste las notificaciones.",
     "deleteAccountDescription": "Esto borra tu cuenta, tus tickets y tus fotos para siempre.",
     "deleteAccount": "Borrar mi cuenta",
     "confirmDelete": "Sí, borrar todo",

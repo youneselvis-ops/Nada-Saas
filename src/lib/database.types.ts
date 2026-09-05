@@ -138,6 +138,7 @@ export type Database = {
           id: string
           locale: string
           onboarded_at: string | null
+          timezone: string
         }
         Insert: {
           created_at?: string
@@ -146,6 +147,7 @@ export type Database = {
           id: string
           locale?: string
           onboarded_at?: string | null
+          timezone?: string
         }
         Update: {
           created_at?: string
@@ -154,6 +156,34 @@ export type Database = {
           id?: string
           locale?: string
           onboarded_at?: string | null
+          timezone?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
         }
         Relationships: []
       }

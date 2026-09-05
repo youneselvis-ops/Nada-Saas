@@ -1,5 +1,23 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Phase 4 : Les alertes
+**Fait :**
+- Migration `009_profile_timezone_and_push_subscriptions` : colonne `profiles.timezone` (défaut `America/Mexico_City`) et table `push_subscriptions` (RLS par propriétaire) — absentes du schéma initial de la section 6 mais nécessaires pour « 17h heure locale » et le push web.
+- Route cron `GET /api/cron/expiry-alerts`, protégée par `Authorization: Bearer $CRON_SECRET` (motif standard Vercel). Tourne toutes les heures (`vercel.json`, `0 * * * *`) ; pour chaque profil dont l'heure locale (`Intl.DateTimeFormat` avec `hourCycle: "h23"`, testé unitairement) est 17h, sélectionne les `inventory_items` actifs expirant sous 48h, écrit d'abord dans `notifications_log` (la contrainte unique `(user_id, kind, dedupe_key)` fait le vrai travail anti-doublon, pas la logique applicative), puis envoie l'email et le push seulement si l'écriture du journal a réussi.
+- Email Resend (`src/lib/email.ts`) : sujet et liste d'articles en es-MX/fr-FR selon la locale du profil ; no-op journalisé (sans contenu de ticket) si `RESEND_API_KEY` absent.
+- Notification web push : clés VAPID générées moi-même avec `web-push` (aucun compte tiers requis, donc pas de secret à demander), service worker (`public/sw.js`), bouton « Activer les notifications » dans `/settings`, route `POST /api/push/subscribe` pour enregistrer l'abonnement, nettoyage automatique des abonnements expirés (404/410) lors de l'envoi.
+- Tests unitaires : `localHour`/`localDateKey`/`isAlertHour` sur plusieurs fuseaux (Mexico vs Paris, y compris le passage de minuit).
+
+**Décisions techniques :**
+- Cron horaire plutôt qu'un cron par fuseau : Vercel Cron n'exécute qu'en UTC, donc c'est la fonction elle-même qui détermine quels utilisateurs sont à 17h locale à chaque passage. **Point de vigilance :** certains paliers Vercel (notamment Hobby, historiquement) restreignent la fréquence des cron jobs — à vérifier une fois le déploiement débloqué ; si le palier actuel ne permet pas une fréquence horaire, il faudra soit passer sur un palier supérieur (décision produit/coût, donc à valider avec l'humain), soit accepter une granularité plus grossière (ex. toutes les 3h, avec une fenêtre de tolérance sur l'heure cible).
+- `profiles.timezone` a un défaut fixe plutôt qu'une détection automatique : il n'y a pas encore d'écran d'onboarding pour le demander. À revisiter si un écran d'accueil est ajouté.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (73/73) e2e ⚠️ (même blocage réseau que phases 2-3) build ✅ deploy ⏳ advisors ✅ runtime ⏳
+
+**Bloqué sur :** `RESEND_API_KEY` toujours absente (email no-op journalisé en attendant) ; mêmes blocages Vercel/secrets que les phases précédentes. Impossible de tester le cron de bout en bout dans ce sandbox — `*.supabase.co` y est bloqué par la policy réseau (voir phases 1-2), donc même un script Node local ne peut pas frapper le vrai projet Supabase depuis ici. La logique pure (calcul d'heure locale, anti-doublon) est testée unitairement ; le test d'intégration réel attendra un déploiement vérifiable.
+
+**Suivant :** phase 5 — la recette anti-gaspi.
+
 ## 2026-09-05 — Phase 3 : L'inventaire vivant
 **Fait :**
 - Écran `/inventory` : liste dense triée par `expires_at` croissant, une règle horizontale fine entre les articles, date alignée à droite — pas de grille de cartes.
