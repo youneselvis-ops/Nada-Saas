@@ -26,11 +26,16 @@
   "dashboard": {
     "title": "Ce mois-ci",
     "savedLabel": "économisé ce mois-ci",
+    "wastedLabel": "perdu ce mois-ci",
     "emptyTitle": "Aucun ticket pour l'instant",
     "emptySubtitle": "Photographie le prochain en sortant du magasin.",
     "addReceipt": "Photographier un ticket",
     "inventory": "Inventaire",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "topWastedTitle": "Ce qui s'est le plus perdu",
+    "priceChangesTitle": "Changements de prix",
+    "priceChangesEmpty": "Pas encore assez de données de prix.",
+    "downloadImage": "Télécharger l'image à partager"
   },
   "settings": {
     "title": "Réglages",

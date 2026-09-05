@@ -1,5 +1,22 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Phase 6 : Le bilan mensuel
+**Fait :**
+- `src/lib/monthly-summary.ts` : agrégats purs et testés unitairement — `computeMonthlyTotals` (valeur sauvée = articles `consumed`, valeur jetée = `wasted`, sur le mois en cours), `topWastedProducts` (top 3 par valeur), `computePriceVariations` (variation première/dernière observation, seuil de 3 observations minimum de la section 7, triée par popularité d'achat, top 5), `monthBounds`/`previousMonthBounds` (bornes UTC du mois, avec gestion correcte des changements d'année).
+- Écran `/dashboard` (« Ce mois-ci ») réécrit en Server Component avec données réelles : montant sauvé en très grand (le geste fort de la section 10, jusque-là un `$0` statique), valeur jetée, top 3 des produits gaspillés, variations de prix — plus l'état vide d'origine si aucun ticket n'existe encore.
+- Export image partageable : route `GET /api/summary/image` générant un PNG **1080×1920** côté serveur avec `next/og` (`ImageResponse`), polices Instrument Sans (regular + bold) embarquées dans le dépôt (`src/lib/fonts/`, téléchargées une fois depuis Google Fonts — le sandbox bloque `*.vercel.app` et `*.supabase.co` mais pas `fonts.gstatic.com`) et chargées via `fetch(new URL(...))` pour un bundling fiable en production. **Vérifié visuellement** par un rendu de test isolé (contournant Supabase, injoignable depuis ce sandbox) : le montant principal est lisible sans zoom, satisfaisant le critère d'acceptation.
+- Email récapitulatif du 1er du mois : `GET /api/cron/monthly-summary` (nouveau cron `0 9 1 * *` dans `vercel.json`), même mécanisme anti-doublon que les alertes d'expiration (écriture dans `notifications_log` avant l'envoi, clé de dédoublonnage = mois `YYYY-MM` résumé), calcule le mois précédent pour chaque profil et envoie via Resend (no-op journalisé sans clé, comme les autres emails).
+
+**Décisions techniques :**
+- Les polices sont vendues dans le dépôt plutôt que chargées à la volée à chaque requête : plus rapide, plus fiable en production, et évite une dépendance réseau supplémentaire au moment de générer l'image.
+- Le test du critère « lisible sans zoom » a été fait par un rendu direct de `ImageResponse` avec des données factices (script isolé, supprimé après vérification), car le flux complet (authentification → Supabase → route) n'est pas exécutable dans ce sandbox — même limitation réseau que documentée aux phases précédentes.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (98/98) e2e ⚠️ (même blocage réseau que phases 2-5) build ✅ (route image compilée et testée manuellement) deploy ⏳ advisors ✅ (aucun changement de schéma) runtime ⏳
+
+**Bloqué sur :** rien de nouveau — toutes les phases du cahier des charges (1 à 6) sont maintenant implémentées. Il reste à débloquer le déploiement Vercel (voir phase 1) pour la vérification finale en ligne, et à fournir `ANTHROPIC_API_KEY`/`RESEND_API_KEY`/`SUPABASE_SERVICE_ROLE_KEY` pour sortir du mode mock.
+
+**Suivant :** une fois le déploiement vérifiable, exécuter la porte qualité complète en ligne (section 12) pour chaque phase, mesurer l'exactitude d'extraction réelle sur les fixtures avec une vraie clé Anthropic, et valider sur de vrais tickets photographiés.
+
 ## 2026-09-05 — Phase 5 : La recette anti-gaspi
 **Fait :**
 - Bouton « ¿Qué hacer con esto? »/« Que faire avec ça ? » affiché sur `/inventory` dès qu'il y a des articles dans la zone « périme sous 48h », menant vers `/recipe?items=id1,id2,...`.

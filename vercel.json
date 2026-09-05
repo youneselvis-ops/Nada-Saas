@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/expiry-alerts",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/monthly-summary",
+      "schedule": "0 9 1 * *"
     }
   ]
 }
