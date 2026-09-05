@@ -70,6 +70,16 @@
     "emptyTitle": "Ton inventaire est vide",
     "emptySubtitle": "Photographie un ticket pour commencer."
   },
+  "recipe": {
+    "cta": "Que faire avec ça ?",
+    "title": "Recette anti-gaspi",
+    "loading": "Recherche d'une recette...",
+    "error": "Impossible de générer une recette. Réessaie.",
+    "prepTime": "{minutes} min",
+    "ingredientsTitle": "Ingrédients",
+    "stepsTitle": "Préparation",
+    "back": "Retour à l'inventaire"
+  },
   "review": {
     "title": "Vérifie ton inventaire",
     "subtitle": "Corrige ce qu'il faut avant de continuer.",

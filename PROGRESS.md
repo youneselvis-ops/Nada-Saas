@@ -1,5 +1,25 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Phase 5 : La recette anti-gaspi
+**Fait :**
+- Bouton « ¿Qué hacer con esto? »/« Que faire avec ça ? » affiché sur `/inventory` dès qu'il y a des articles dans la zone « périme sous 48h », menant vers `/recipe?items=id1,id2,...`.
+- Route `POST /api/recipes/generate` : résout les `inventory_items` demandés (vérifie l'appartenance à l'utilisateur), construit la liste d'ingrédients disponibles, calcule une clé de cache déterministe (`buildRecipeCacheKey`, insensible à l'ordre et aux doublons, incluant la locale), regarde d'abord dans `recipe_cache` avant d'appeler le modèle.
+- Génération de recette (réelle via Claude texte, mock déterministe sinon) contrainte au prompt système à n'utiliser que les ingrédients fournis + une liste courte de basiques (huile/sel/poivre/ail/oignon/riz/œuf, en es-MX et fr-FR), avec un seul rejeu si la validation échoue — même schéma de robustesse que l'extraction de tickets.
+- **Contrôle automatisé de la règle centrale** (`recipeUsesOnlyAllowedIngredients`) : vérifie qu'aucun ingrédient de la recette n'est absent de l'inventaire fourni ni de la liste de basiques — appliqué à la fois côté génération réelle (rejeu puis échec propre) et testé unitairement avec des cas positifs et négatifs. C'est un test automatisé, pas une vérification visuelle, conformément au critère d'acceptation.
+- Temps de préparation contraint à 30 minutes maximum par le schéma Zod (`prep_minutes` entier, `max(30)`).
+- Migration `010_recipe_cache` : table `recipe_cache` (clé unique sur `cache_key`), lecture/écriture ouvertes aux utilisateurs authentifiés (cache partagé, données non sensibles).
+- Écran `/recipe` : titre, temps de préparation, liste d'ingrédients, étapes numérotées, retour vers l'inventaire.
+
+**Décisions techniques :**
+- Le cache est partagé entre utilisateurs (clé = ingrédients + locale, pas d'user_id) plutôt que par utilisateur : deux personnes avec les mêmes produits en fin de vie reçoivent la même recette, ce qui maximise l'effet du cache et correspond à l'objectif de maîtrise des coûts de la section 9.
+- La contrainte d'ingrédients est vérifiée deux fois : une fois dans le module de génération (rejeu puis échec propre si toujours invalide après une deuxième tentative), et une fois de plus comme fonction pure testée unitairement — c'est cette dernière qui constitue le test automatisé exigé par le critère d'acceptation, indépendamment de l'implémentation de l'appel au modèle.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (85/85) e2e ⚠️ (même blocage réseau que phases 2-4) build ✅ deploy ⏳ advisors ✅ runtime ⏳
+
+**Bloqué sur :** rien de nouveau.
+
+**Suivant :** phase 6 — le bilan mensuel.
+
 ## 2026-09-05 — Phase 4 : Les alertes
 **Fait :**
 - Migration `009_profile_timezone_and_push_subscriptions` : colonne `profiles.timezone` (défaut `America/Mexico_City`) et table `push_subscriptions` (RLS par propriétaire) — absentes du schéma initial de la section 6 mais nécessaires pour « 17h heure locale » et le push web.

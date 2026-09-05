@@ -282,6 +282,30 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          id: string
+          locale: string
+          recipe: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          id?: string
+          locale: string
+          recipe: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          id?: string
+          locale?: string
+          recipe?: Json
+        }
+        Relationships: []
+      }
       shelf_life_catalog: {
         Row: {
           aliases: string[]

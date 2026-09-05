@@ -1,7 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { expiryZone, type ExpiryZone } from "@/lib/inventory";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/database.types";
@@ -22,6 +24,7 @@ function formatCurrency(amount: number, currency: string): string {
 
 export default function InventoryPage() {
   const t = useTranslations("inventory");
+  const recipeT = useTranslations("recipe");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [currency, setCurrency] = useState("MXN");
   const [loading, setLoading] = useState(true);
@@ -89,11 +92,18 @@ export default function InventoryPage() {
   return (
     <main className="flex flex-col gap-6 px-4 py-8">
       {urgentValue > 0 ? (
-        <div>
-          <p className="text-4xl font-medium tabular-nums text-jamaica">
-            {formatCurrency(urgentValue, currency)}
-          </p>
-          <p className="text-fade">{t("urgentValueLabel")}</p>
+        <div className="flex flex-col items-start gap-3">
+          <div>
+            <p className="text-4xl font-medium tabular-nums text-jamaica">
+              {formatCurrency(urgentValue, currency)}
+            </p>
+            <p className="text-fade">{t("urgentValueLabel")}</p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href={`/recipe?items=${zones.urgent.map((item) => item.id).join(",")}`}>
+              {recipeT("cta")}
+            </Link>
+          </Button>
         </div>
       ) : null}
 

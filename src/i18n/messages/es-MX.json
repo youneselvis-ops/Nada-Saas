@@ -70,6 +70,16 @@
     "emptyTitle": "Tu inventario está vacío",
     "emptySubtitle": "Fotografía un ticket para empezar."
   },
+  "recipe": {
+    "cta": "¿Qué hacer con esto?",
+    "title": "Receta anti-desperdicio",
+    "loading": "Buscando una receta...",
+    "error": "No se pudo generar una receta. Intenta de nuevo.",
+    "prepTime": "{minutes} min",
+    "ingredientsTitle": "Ingredientes",
+    "stepsTitle": "Preparación",
+    "back": "Volver al inventario"
+  },
   "review": {
     "title": "Revisa tu inventario",
     "subtitle": "Corrige lo que haga falta antes de continuar.",
