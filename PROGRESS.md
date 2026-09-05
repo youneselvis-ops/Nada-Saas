@@ -1,5 +1,16 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Bug de confidentialité trouvé : la suppression de compte n'effaçait jamais les photos de ticket
+La section 16 est explicite et sans ambiguïté : « Suppression de compte fonctionnelle... elle efface les lignes **et** les fichiers Storage » — et insiste sur le fait qu'un ticket de caisse est une donnée personnelle sensible. En comparant le code d'upload (`src/app/receipts/new/page.tsx`) et le code de suppression (`src/app/api/account/delete/route.ts`), j'ai trouvé un vrai bug : les images sont stockées à `{user_id}/{receipt_id}/{n}.jpg` (un niveau sous le préfixe utilisateur), mais la route de suppression appelait `admin.storage.from("receipts").list(user.id)` — `list()` n'est **pas récursif** dans Supabase Storage, donc cet appel ne retournait que les pseudo-dossiers `{receipt_id}` eux-mêmes, pas les fichiers à l'intérieur. Le code construisait ensuite `${user.id}/${file.name}` = `{user_id}/{receipt_id}` — un préfixe de dossier, pas une vraie clé d'objet — et le passait à `.remove()`, qui ne supprime que des clés exactes. Résultat : **aucune photo de ticket n'était jamais réellement effacée**, alors que la route retournait `{ok: true}` et que l'utilisateur croyait sa suppression complète.
+
+**Corrigé :** la route interroge maintenant la table `receipts` pour obtenir tous les `image_path` de l'utilisateur (exactement la même valeur que la route d'extraction utilise déjà pour lister les images d'un ticket), liste les fichiers de chaque dossier de ticket individuellement, et construit les vraies clés d'objets avant l'appel à `.remove()`.
+
+**Vérification :** confirmé par lecture croisée du code d'upload et de suppression (structure de dossier sans ambiguïté des deux côtés) — aucune donnée réelle en base pour tester en conditions réelles (`select name from storage.objects` renvoie vide, aucun utilisateur réel n'a encore utilisé l'app déployée), donc la correction s'appuie sur la sémantique documentée de `list()`/`remove()` de Supabase Storage plutôt que sur un test de bout en bout contre de vraies données.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (116/116) build ✅
+
+**Suivant :** continuer à guetter la PR ; si un jour des données réelles existent, revérifier cette route en conditions réelles (upload → suppression → confirmation que `storage.objects` est bien vide pour cet utilisateur).
+
 ## 2026-09-05 — Bug latent trouvé : une seule erreur d'envoi arrêtait tout le cron pour tous les utilisateurs suivants
 En continuant l'audit de fiabilité après le bug du middleware, j'ai relu les deux boucles `for (const profile of profiles)` des routes cron avec un œil différent : que se passe-t-il si `sendExpiryAlertEmail`/`sendMonthlySummaryEmail` lève une exception pour un utilisateur au milieu de la boucle ? Réponse : **rien ne l'attrapait**. Ni `sendExpiryAlertEmail` ni `sendMonthlySummaryEmail` (`src/lib/email.ts`) n'encadrent leur appel `resend.emails.send(...)` d'un try/catch, et les deux boucles des routes cron n'avaient elles-mêmes aucun try/catch autour du corps de boucle. Une exception non attrapée dans une itération interrompt immédiatement toute la fonction — donc tous les utilisateurs après celui qui a échoué ne recevaient **aucune** alerte ce jour-là, silencieusement, sans erreur visible autre qu'un statut 500 générique.
 
