@@ -1,0 +1,42 @@
+{
+  "common": {
+    "appName": "Nada",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "settings": "Ajustes"
+  },
+  "login": {
+    "title": "Entra a tu cocina",
+    "subtitle": "Sin contraseña. Te mandamos un código a tu correo.",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "tu@correo.com",
+    "sendCode": "Enviar código",
+    "sending": "Enviando...",
+    "codeSentTitle": "Revisa tu correo",
+    "codeSentSubtitle": "Escribe el código de 6 dígitos que te enviamos a {email}.",
+    "codeLabel": "Código",
+    "verify": "Entrar",
+    "verifying": "Verificando...",
+    "backToEmail": "Usar otro correo",
+    "errorGeneric": "Algo salió mal. Intenta de nuevo.",
+    "errorInvalidCode": "Ese código no es válido o ya expiró."
+  },
+  "dashboard": {
+    "title": "Este mes",
+    "savedLabel": "ahorrado este mes",
+    "emptyTitle": "Aún no hay tickets",
+    "emptySubtitle": "Fotografía el próximo al salir de la tienda.",
+    "addReceipt": "Fotografiar ticket",
+    "inventory": "Inventario",
+    "signOut": "Cerrar sesión"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "deleteAccountDescription": "Esto borra tu cuenta, tus tickets y tus fotos para siempre.",
+    "deleteAccount": "Borrar mi cuenta",
+    "confirmDelete": "Sí, borrar todo",
+    "deleting": "Borrando...",
+    "cancel": "Cancelar"
+  }
+}

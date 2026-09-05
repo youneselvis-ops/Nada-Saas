@@ -1,0 +1,42 @@
+{
+  "common": {
+    "appName": "Nada",
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "settings": "Réglages"
+  },
+  "login": {
+    "title": "Entre dans ta cuisine",
+    "subtitle": "Pas de mot de passe. On t'envoie un code par email.",
+    "emailLabel": "Adresse email",
+    "emailPlaceholder": "toi@email.com",
+    "sendCode": "Envoyer le code",
+    "sending": "Envoi...",
+    "codeSentTitle": "Regarde tes emails",
+    "codeSentSubtitle": "Saisis le code à 6 chiffres envoyé à {email}.",
+    "codeLabel": "Code",
+    "verify": "Entrer",
+    "verifying": "Vérification...",
+    "backToEmail": "Utiliser un autre email",
+    "errorGeneric": "Une erreur est survenue. Réessaie.",
+    "errorInvalidCode": "Ce code est invalide ou a expiré."
+  },
+  "dashboard": {
+    "title": "Ce mois-ci",
+    "savedLabel": "économisé ce mois-ci",
+    "emptyTitle": "Aucun ticket pour l'instant",
+    "emptySubtitle": "Photographie le prochain en sortant du magasin.",
+    "addReceipt": "Photographier un ticket",
+    "inventory": "Inventaire",
+    "signOut": "Se déconnecter"
+  },
+  "settings": {
+    "title": "Réglages",
+    "deleteAccountDescription": "Ceci efface ton compte, tes tickets et tes photos pour toujours.",
+    "deleteAccount": "Supprimer mon compte",
+    "confirmDelete": "Oui, tout supprimer",
+    "deleting": "Suppression...",
+    "cancel": "Annuler"
+  }
+}
