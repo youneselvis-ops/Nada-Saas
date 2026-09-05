@@ -4,7 +4,8 @@
     "loading": "Chargement...",
     "save": "Enregistrer",
     "cancel": "Annuler",
-    "settings": "Réglages"
+    "settings": "Réglages",
+    "inventoryNavLabel": "Inventaire"
   },
   "login": {
     "title": "Entre dans ta cuisine",
@@ -25,18 +26,80 @@
   "dashboard": {
     "title": "Ce mois-ci",
     "savedLabel": "économisé ce mois-ci",
+    "wastedLabel": "perdu ce mois-ci",
     "emptyTitle": "Aucun ticket pour l'instant",
     "emptySubtitle": "Photographie le prochain en sortant du magasin.",
     "addReceipt": "Photographier un ticket",
     "inventory": "Inventaire",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "topWastedTitle": "Ce qui s'est le plus perdu",
+    "priceChangesTitle": "Changements de prix",
+    "priceChangesEmpty": "Pas encore assez de données de prix.",
+    "downloadImage": "Télécharger l'image à partager"
   },
   "settings": {
     "title": "Réglages",
+    "languageTitle": "Langue et devise",
+    "languageMx": "Español (México) — MXN",
+    "languageFr": "Français (France) — EUR",
+    "languageUpdating": "Changement...",
+    "enableNotifications": "Activer les notifications",
+    "notificationsEnabled": "Notifications activées",
+    "notificationsDenied": "Tu n'as pas activé les notifications.",
     "deleteAccountDescription": "Ceci efface ton compte, tes tickets et tes photos pour toujours.",
     "deleteAccount": "Supprimer mon compte",
     "confirmDelete": "Oui, tout supprimer",
     "deleting": "Suppression...",
     "cancel": "Annuler"
+  },
+  "capture": {
+    "title": "Photographie ton ticket",
+    "subtitle": "Une photo par page du ticket. Tu peux en prendre plusieurs.",
+    "addPhoto": "Prendre ou choisir une photo",
+    "photoCount": "{count} photo ajoutée|{count} photos ajoutées",
+    "submit": "Extraire les produits",
+    "uploading": "Envoi...",
+    "error": "Impossible d'envoyer le ticket. Réessaie.",
+    "removePhoto": "Retirer"
+  },
+  "processing": {
+    "title": "Lecture du ticket...",
+    "subtitle": "Cela prend quelques secondes.",
+    "failedTitle": "Impossible de lire ce ticket",
+    "failedSubtitle": "Réessaie avec une photo plus nette et bien éclairée.",
+    "retry": "Réessayer"
+  },
+  "inventory": {
+    "urgentValueLabel": "en risque de se perdre",
+    "zoneUrgent": "Périme sous 48 heures",
+    "zoneSoon": "Périme sous 5 jours",
+    "zoneLater": "Plus tard",
+    "markEaten": "Mangé",
+    "markWasted": "Jeté",
+    "emptyTitle": "Ton inventaire est vide",
+    "emptySubtitle": "Photographie un ticket pour commencer."
+  },
+  "recipe": {
+    "cta": "Que faire avec ça ?",
+    "title": "Recette anti-gaspi",
+    "loading": "Recherche d'une recette...",
+    "error": "Impossible de générer une recette. Réessaie.",
+    "prepTime": "{minutes} min",
+    "ingredientsTitle": "Ingrédients",
+    "stepsTitle": "Préparation",
+    "back": "Retour à l'inventaire"
+  },
+  "review": {
+    "title": "Vérifie ton inventaire",
+    "subtitle": "Corrige ce qu'il faut avant de continuer.",
+    "needsReview": "Confiance faible — vérifie les prix et quantités.",
+    "emptyTitle": "Aucun produit alimentaire détecté",
+    "emptySubtitle": "Tu peux repartir avec une nouvelle photo.",
+    "delete": "Retirer",
+    "quantityLabel": "Quantité",
+    "priceLabel": "Prix",
+    "done": "Terminé, voir l'inventaire",
+    "ticketTitle": "Ton ticket",
+    "nonFoodLabel": "article non alimentaire"
   }
 }

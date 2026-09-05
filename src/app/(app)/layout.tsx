@@ -22,6 +22,12 @@ function Header() {
       <span className="text-lg font-medium text-ink">{t("appName")}</span>
       <div className="flex items-center gap-4">
         <Link
+          href="/inventory"
+          className="min-h-11 px-2 py-2 text-sm text-ink underline underline-offset-2"
+        >
+          {t("inventoryNavLabel")}
+        </Link>
+        <Link
           href="/settings"
           className="min-h-11 px-2 py-2 text-sm text-fade underline underline-offset-2"
         >

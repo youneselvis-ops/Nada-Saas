@@ -1,0 +1,79 @@
+{
+  "store_name": "Supermercado El Aguila",
+  "purchased_at": "2026-09-01",
+  "currency": "MXN",
+  "total_amount": 296.23,
+  "confidence": 0.9,
+  "items": [
+    {
+      "raw_label": "JIT TOM 1.250KG",
+      "normalized_name": "jitomate",
+      "category": "produce",
+      "quantity": 1.25,
+      "unit": "kg",
+      "unit_price": 18.9,
+      "total_price": 23.63,
+      "is_food": true
+    },
+    {
+      "raw_label": "CEBOLLA BCA 0.800KG",
+      "normalized_name": "cebolla",
+      "category": "produce",
+      "quantity": 0.8,
+      "unit": "kg",
+      "unit_price": 22,
+      "total_price": 17.6,
+      "is_food": true
+    },
+    {
+      "raw_label": "LECHE LALA 1L",
+      "normalized_name": "leche",
+      "category": "dairy",
+      "quantity": 1,
+      "unit": "l",
+      "unit_price": 28,
+      "total_price": 28,
+      "is_food": true
+    },
+    {
+      "raw_label": "HUEVO SN BCO 30PZ",
+      "normalized_name": "huevo",
+      "category": "dairy",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 95,
+      "total_price": 95,
+      "is_food": true
+    },
+    {
+      "raw_label": "PAN BIMBO GDE",
+      "normalized_name": "pan",
+      "category": "bakery",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 42.5,
+      "total_price": 42.5,
+      "is_food": true
+    },
+    {
+      "raw_label": "POLLO PIERNA/MUSLO 1.100KG",
+      "normalized_name": "pollo",
+      "category": "meat",
+      "quantity": 1.1,
+      "unit": "kg",
+      "unit_price": 65,
+      "total_price": 71.5,
+      "is_food": true
+    },
+    {
+      "raw_label": "JABON ZOTE",
+      "normalized_name": "jabon",
+      "category": "household",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 18,
+      "total_price": 18,
+      "is_food": false
+    }
+  ]
+}

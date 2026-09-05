@@ -1,0 +1,49 @@
+{
+  "store_name": "Superette du Coin",
+  "purchased_at": "2026-09-04",
+  "currency": "EUR",
+  "total_amount": 6.8,
+  "confidence": 0.87,
+  "items": [
+    {
+      "raw_label": "EAU EVIAN 1.5L",
+      "normalized_name": "eau",
+      "category": "beverage",
+      "quantity": 1.5,
+      "unit": "l",
+      "unit_price": 0.8,
+      "total_price": 0.8,
+      "is_food": true
+    },
+    {
+      "raw_label": "BAGUETTE",
+      "normalized_name": "baguette",
+      "category": "bakery",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 1.1,
+      "total_price": 1.1,
+      "is_food": true
+    },
+    {
+      "raw_label": "JAMBON BLANC 4TR",
+      "normalized_name": "jambon",
+      "category": "meat",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 2.6,
+      "total_price": 2.6,
+      "is_food": true
+    },
+    {
+      "raw_label": "FROMAGE RAPE 200G",
+      "normalized_name": "fromage rape",
+      "category": "dairy",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 2.3,
+      "total_price": 2.3,
+      "is_food": true
+    }
+  ]
+}

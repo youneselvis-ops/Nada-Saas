@@ -4,7 +4,8 @@
     "loading": "Cargando...",
     "save": "Guardar",
     "cancel": "Cancelar",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "inventoryNavLabel": "Inventario"
   },
   "login": {
     "title": "Entra a tu cocina",
@@ -25,18 +26,80 @@
   "dashboard": {
     "title": "Este mes",
     "savedLabel": "ahorrado este mes",
+    "wastedLabel": "perdido este mes",
     "emptyTitle": "Aún no hay tickets",
     "emptySubtitle": "Fotografía el próximo al salir de la tienda.",
     "addReceipt": "Fotografiar ticket",
     "inventory": "Inventario",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "topWastedTitle": "Lo que más se echó a perder",
+    "priceChangesTitle": "Cambios de precio",
+    "priceChangesEmpty": "Aún no hay suficientes datos de precio.",
+    "downloadImage": "Descargar imagen para compartir"
   },
   "settings": {
     "title": "Ajustes",
+    "languageTitle": "Idioma y moneda",
+    "languageMx": "Español (México) — MXN",
+    "languageFr": "Français (France) — EUR",
+    "languageUpdating": "Cambiando...",
+    "enableNotifications": "Activar notificaciones",
+    "notificationsEnabled": "Notificaciones activadas",
+    "notificationsDenied": "No activaste las notificaciones.",
     "deleteAccountDescription": "Esto borra tu cuenta, tus tickets y tus fotos para siempre.",
     "deleteAccount": "Borrar mi cuenta",
     "confirmDelete": "Sí, borrar todo",
     "deleting": "Borrando...",
     "cancel": "Cancelar"
+  },
+  "capture": {
+    "title": "Fotografía tu ticket",
+    "subtitle": "Una foto por página del ticket. Puedes tomar varias.",
+    "addPhoto": "Tomar o elegir foto",
+    "photoCount": "{count} foto agregada|{count} fotos agregadas",
+    "submit": "Extraer productos",
+    "uploading": "Subiendo...",
+    "error": "No se pudo subir el ticket. Intenta de nuevo.",
+    "removePhoto": "Quitar"
+  },
+  "processing": {
+    "title": "Leyendo tu ticket...",
+    "subtitle": "Esto toma unos segundos.",
+    "failedTitle": "No pudimos leer este ticket",
+    "failedSubtitle": "Intenta con una foto más clara y bien iluminada.",
+    "retry": "Volver a intentar"
+  },
+  "inventory": {
+    "urgentValueLabel": "en riesgo de perderse",
+    "zoneUrgent": "Se echa a perder en 48 horas",
+    "zoneSoon": "Se echa a perder en 5 días",
+    "zoneLater": "Más adelante",
+    "markEaten": "Comí",
+    "markWasted": "Tiré",
+    "emptyTitle": "Tu inventario está vacío",
+    "emptySubtitle": "Fotografía un ticket para empezar."
+  },
+  "recipe": {
+    "cta": "¿Qué hacer con esto?",
+    "title": "Receta anti-desperdicio",
+    "loading": "Buscando una receta...",
+    "error": "No se pudo generar una receta. Intenta de nuevo.",
+    "prepTime": "{minutes} min",
+    "ingredientsTitle": "Ingredientes",
+    "stepsTitle": "Preparación",
+    "back": "Volver al inventario"
+  },
+  "review": {
+    "title": "Revisa tu inventario",
+    "subtitle": "Corrige lo que haga falta antes de continuar.",
+    "needsReview": "Confianza baja — revisa los precios y cantidades.",
+    "emptyTitle": "No se detectaron productos alimenticios",
+    "emptySubtitle": "Puedes fotografiar el ticket de nuevo.",
+    "delete": "Quitar",
+    "quantityLabel": "Cantidad",
+    "priceLabel": "Precio",
+    "done": "Listo, ir al inventario",
+    "ticketTitle": "Tu ticket",
+    "nonFoodLabel": "artículo no alimentario"
   }
 }

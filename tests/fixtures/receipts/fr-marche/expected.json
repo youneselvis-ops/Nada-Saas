@@ -1,0 +1,49 @@
+{
+  "store_name": "Marche de Provence",
+  "purchased_at": null,
+  "currency": "EUR",
+  "total_amount": 6.9,
+  "confidence": 0.83,
+  "items": [
+    {
+      "raw_label": "POMMES GALA KG",
+      "normalized_name": "pomme",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "kg",
+      "unit_price": 2.2,
+      "total_price": 2.2,
+      "is_food": true
+    },
+    {
+      "raw_label": "CAROTTES BOTTE",
+      "normalized_name": "carotte",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 1.5,
+      "total_price": 1.5,
+      "is_food": true
+    },
+    {
+      "raw_label": "POIREAUX BOTTE",
+      "normalized_name": "poireau",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 1.8,
+      "total_price": 1.8,
+      "is_food": true
+    },
+    {
+      "raw_label": "OIGNONS JAUNES KG",
+      "normalized_name": "oignon",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "kg",
+      "unit_price": 1.4,
+      "total_price": 1.4,
+      "is_food": true
+    }
+  ]
+}

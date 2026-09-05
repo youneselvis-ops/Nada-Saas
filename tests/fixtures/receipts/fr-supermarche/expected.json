@@ -1,0 +1,69 @@
+{
+  "store_name": "Carrefour Market",
+  "purchased_at": "2026-09-03",
+  "currency": "EUR",
+  "total_amount": 19.23,
+  "confidence": 0.91,
+  "items": [
+    {
+      "raw_label": "TOMATES GRAPPE 0.600KG",
+      "normalized_name": "tomate",
+      "category": "produce",
+      "quantity": 0.6,
+      "unit": "kg",
+      "unit_price": 2.5,
+      "total_price": 1.5,
+      "is_food": true
+    },
+    {
+      "raw_label": "LAIT DEMI ECREME 1L",
+      "normalized_name": "lait",
+      "category": "dairy",
+      "quantity": 1,
+      "unit": "l",
+      "unit_price": 0.95,
+      "total_price": 0.95,
+      "is_food": true
+    },
+    {
+      "raw_label": "OEUFS X12",
+      "normalized_name": "oeuf",
+      "category": "dairy",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 2.8,
+      "total_price": 2.8,
+      "is_food": true
+    },
+    {
+      "raw_label": "POULET FERMIER 1.200KG",
+      "normalized_name": "poulet",
+      "category": "meat",
+      "quantity": 1.2,
+      "unit": "kg",
+      "unit_price": 8.9,
+      "total_price": 10.68,
+      "is_food": true
+    },
+    {
+      "raw_label": "PAIN COMPLET",
+      "normalized_name": "pain",
+      "category": "bakery",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 1.2,
+      "total_price": 1.2,
+      "is_food": true
+    },
+    {
+      "raw_label": "SAVON DOP",
+      "normalized_name": "savon",
+      "category": "household",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 2.1,
+      "total_price": 2.1,
+      "is_food": false
+    }
+  ]
+}

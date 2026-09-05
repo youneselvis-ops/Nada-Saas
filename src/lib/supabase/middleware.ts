@@ -1,7 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+// /api/cron/* is called directly by Vercel Cron, never from a logged-in
+// browser session — it carries no Supabase session cookie, only an
+// `Authorization: Bearer $CRON_SECRET` header that each cron route checks
+// itself. Without this exemption every cron hit gets redirected to /login
+// before the route handler ever runs, silently breaking the entire alert
+// and monthly-summary pipeline in production.
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/api/cron"];
+
+/** Whether `pathname` may be requested without an authenticated session. */
+export function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -31,11 +42,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isPublicPath = PUBLIC_PATHS.some((path) =>
-    request.nextUrl.pathname.startsWith(path),
-  );
-
-  if (!user && !isPublicPath) {
+  if (!user && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

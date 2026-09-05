@@ -1,5 +1,244 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Régression trouvée : l'image de bilan partageable avait gardé l'ancienne couleur non conforme AA
+En vérifiant les autres routes de l'API par la même méthode que les bugs précédents, j'ai relu `src/app/api/summary/image/route.tsx` (l'image 1080×1920 générée par `next/og` pour la phase 6) et remarqué qu'elle définit sa propre copie de la palette en constantes hexadécimales locales — nécessaire puisque `next/og` ne peut pas consommer les classes Tailwind ni les variables CSS. Cette copie contenait encore `const FADE = "#8c8b84"`, la valeur **d'avant** la correction WCAG AA de cette session (`globals.css` avait été corrigé en `#706f69`, voir l'entrée plus bas). Un vrai oubli de synchronisation : les libellés « ahorrado este mes »/« perdido este mes » sur l'image partageable restaient sous le seuil de contraste AA (3.27:1) alors que l'équivalent à l'écran avait déjà été corrigé.
+
+**Corrigé :** extraction de la palette dans un module partagé unique `src/lib/palette.ts` (avec un commentaire expliquant pourquoi cette duplication existe), `route.tsx` importe désormais ces constantes au lieu de les redéfinir. Ajout de `tests/unit/palette.test.ts`, qui lit `globals.css` directement et vérifie que chaque valeur de `palette.ts` correspond exactement à la variable CSS `--*` correspondante — pour que ce type de dérive (une palette corrigée à un endroit mais oubliée dans sa copie dupliquée) ne puisse plus jamais passer inaperçu.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (122/122, +6 nouveaux) build ✅
+
+**Suivant :** continuer à guetter la PR.
+
+## 2026-09-05 — Bug de confidentialité trouvé : la suppression de compte n'effaçait jamais les photos de ticket
+La section 16 est explicite et sans ambiguïté : « Suppression de compte fonctionnelle... elle efface les lignes **et** les fichiers Storage » — et insiste sur le fait qu'un ticket de caisse est une donnée personnelle sensible. En comparant le code d'upload (`src/app/receipts/new/page.tsx`) et le code de suppression (`src/app/api/account/delete/route.ts`), j'ai trouvé un vrai bug : les images sont stockées à `{user_id}/{receipt_id}/{n}.jpg` (un niveau sous le préfixe utilisateur), mais la route de suppression appelait `admin.storage.from("receipts").list(user.id)` — `list()` n'est **pas récursif** dans Supabase Storage, donc cet appel ne retournait que les pseudo-dossiers `{receipt_id}` eux-mêmes, pas les fichiers à l'intérieur. Le code construisait ensuite `${user.id}/${file.name}` = `{user_id}/{receipt_id}` — un préfixe de dossier, pas une vraie clé d'objet — et le passait à `.remove()`, qui ne supprime que des clés exactes. Résultat : **aucune photo de ticket n'était jamais réellement effacée**, alors que la route retournait `{ok: true}` et que l'utilisateur croyait sa suppression complète.
+
+**Corrigé :** la route interroge maintenant la table `receipts` pour obtenir tous les `image_path` de l'utilisateur (exactement la même valeur que la route d'extraction utilise déjà pour lister les images d'un ticket), liste les fichiers de chaque dossier de ticket individuellement, et construit les vraies clés d'objets avant l'appel à `.remove()`.
+
+**Vérification :** confirmé par lecture croisée du code d'upload et de suppression (structure de dossier sans ambiguïté des deux côtés) — aucune donnée réelle en base pour tester en conditions réelles (`select name from storage.objects` renvoie vide, aucun utilisateur réel n'a encore utilisé l'app déployée), donc la correction s'appuie sur la sémantique documentée de `list()`/`remove()` de Supabase Storage plutôt que sur un test de bout en bout contre de vraies données.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (116/116) build ✅
+
+**Suivant :** continuer à guetter la PR ; si un jour des données réelles existent, revérifier cette route en conditions réelles (upload → suppression → confirmation que `storage.objects` est bien vide pour cet utilisateur).
+
+## 2026-09-05 — Bug latent trouvé : une seule erreur d'envoi arrêtait tout le cron pour tous les utilisateurs suivants
+En continuant l'audit de fiabilité après le bug du middleware, j'ai relu les deux boucles `for (const profile of profiles)` des routes cron avec un œil différent : que se passe-t-il si `sendExpiryAlertEmail`/`sendMonthlySummaryEmail` lève une exception pour un utilisateur au milieu de la boucle ? Réponse : **rien ne l'attrapait**. Ni `sendExpiryAlertEmail` ni `sendMonthlySummaryEmail` (`src/lib/email.ts`) n'encadrent leur appel `resend.emails.send(...)` d'un try/catch, et les deux boucles des routes cron n'avaient elles-mêmes aucun try/catch autour du corps de boucle. Une exception non attrapée dans une itération interrompt immédiatement toute la fonction — donc tous les utilisateurs après celui qui a échoué ne recevaient **aucune** alerte ce jour-là, silencieusement, sans erreur visible autre qu'un statut 500 générique.
+
+**Pourquoi c'est un risque réel, pas théorique :** `from: "Nada <notificaciones@nada.app>"` est un domaine expéditeur placeholder, jamais vérifié auprès de Resend — un vrai `RESEND_API_KEY` (dès qu'il sera fourni) ferait donc échouer l'envoi avec une erreur Resend classique de domaine non vérifié. Comme le mode mock actuel (`RESEND_API_KEY` absente) fait un no-op silencieux, ce bug était totalement invisible jusqu'ici et n'aurait explosé qu'au moment précis où l'humain ajouterait la vraie clé — avec pour effet qu'un seul utilisateur en échec de livraison aurait privé tous les suivants de leur alerte, tous les jours, indéfiniment, sans qu'aucune alarme ne se déclenche.
+
+**Comparaison utile :** `sendPushToUser` (`src/lib/push.ts`) faisait déjà ça correctement — chaque abonnement push est dans son propre try/catch, documenté explicitement (« so one bad endpoint doesn't stop the rest »). Le même principe manquait simplement côté email dans les deux routes cron.
+
+**Corrigé :** le corps de chaque itération des deux boucles (`expiry-alerts` et `monthly-summary`) est maintenant encadré d'un try/catch qui journalise un message générique sans donnée utilisateur (conforme section 16) et continue sur le profil suivant — une défaillance de livraison pour un utilisateur n'affecte plus jamais les autres.
+
+**Non corrigé, à la charge de l'humain :** le domaine expéditeur `nada.app` reste un placeholder non vérifié. Vérifier un vrai domaine dans Resend est une action externe (DNS, tableau de bord Resend) que je ne peux pas effectuer moi-même — je ne l'ai donc pas remplacé au hasard par un autre domaine tout aussi non fonctionnel. Ce point s'ajoute à la liste déjà connue (`RESEND_API_KEY` manquante).
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (116/116, inchangés — code de résilience autour d'un appel externe, pas de nouvelle logique métier pure à isoler ; cohérent avec le reste du code de routes qui n'est pas non plus testé unitairement, seules les fonctions pures le sont) build ✅
+
+**Suivant :** continuer à guetter la PR.
+
+## 2026-09-05 — Bug critique trouvé : le cron d'alertes et de bilan mensuel n'a jamais pu s'exécuter en production
+En continuant l'audit après le correctif du sélecteur de marché, j'ai vérifié un point jamais testé jusqu'ici : est-ce que les routes `/api/cron/expiry-alerts` et `/api/cron/monthly-summary` sont réellement atteignables par Vercel Cron une fois déployées ? Réponse : **non**. `src/middleware.ts` s'applique à toutes les routes sauf les fichiers statiques (aucune exclusion pour `/api/*`), et `updateSession` (`src/lib/supabase/middleware.ts`) redirige vers `/login` toute requête sans session Supabase authentifiée — sauf sur `PUBLIC_PATHS`, qui ne contenait que `/login` et `/auth/callback`. Or Vercel Cron appelle ces routes sans aucun cookie de session, uniquement avec un en-tête `Authorization: Bearer $CRON_SECRET` que **chaque route vérifie elle-même** (`route.ts` ligne 21-24). Le middleware interceptait donc la requête et renvoyait une redirection 302 vers `/login` **avant même que le handler de la route ne s'exécute** — la vérification du `CRON_SECRET` et toute la logique d'envoi d'alertes/bilan n'étaient jamais atteintes.
+
+**Conséquence réelle :** malgré un déploiement vert et des advisors au vert, les phases 4 (alertes) et 6 (email récapitulatif mensuel) n'ont jamais pu fonctionner ne serait-ce qu'une seule fois en production — c'est un vrai bug bloquant passé inaperçu parce qu'aucune vérification précédente n'avait simulé une requête de cron réelle (sans session) contre le middleware, seulement lu le code de la route isolément.
+
+**Corrigé :** ajout de `/api/cron` à `PUBLIC_PATHS` — ces routes restent protégées (chaque handler continue de vérifier `CRON_SECRET` lui-même et rejette avec 401 si absent/incorrect), seule la redirection de session du middleware est contournée pour ce préfixe. Extraction de la logique de correspondance en une fonction pure exportée `isPublicPath(pathname)`, avec un test de non-régression (`tests/unit/middleware-public-paths.test.ts`) qui verrouille explicitement que les deux routes cron restent publiques et que toutes les autres routes (dashboard, inventaire, réglages, API authentifiées) continuent d'exiger une session — pour que ce bug précis ne puisse plus jamais revenir silencieusement.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (116/116, +12 nouveaux) build ✅
+
+**Suivant :** continuer à guetter la PR ; une fois déployé, ce correctif devrait rendre les cron réellement fonctionnels pour la première fois — à confirmer via les logs runtime Vercel dès que possible.
+
+## 2026-09-05 — Écart fonctionnel réel trouvé : impossible de passer au marché français
+En cherchant d'autres écarts après l'audit design/tests, j'ai vérifié un point jamais testé jusqu'ici : la section 1 nomme explicitement la France (`fr-FR`) comme second marché, et `profiles.locale`/`profiles.currency` pilotent réellement du comportement métier (langue des emails Resend, langue de la recette générée, texte de l'image de bilan mensuel — vérifié par grep sur les usages réels de `profile.locale`, pas supposé). Mais **aucun écran de l'application ne permettait de changer ces valeurs** : la locale était lue uniquement depuis un cookie `NEXT_LOCALE` (`src/i18n/request.ts`), jamais écrit nulle part ; tout profil restait donc bloqué sur `es-MX`/`MXN` par défaut à vie. Un utilisateur français n'avait aucun moyen d'utiliser l'app dans sa langue — un vrai manque fonctionnel, pas un détail cosmétique, puisqu'il rend le second marché du produit inutilisable en pratique.
+
+**Corrigé :** ajout d'un sélecteur langue/devise dans `/settings` — deux boutons (« Español (México) — MXN » / « Français (France) — EUR »), qui au clic mettent à jour `profiles.locale`/`profiles.currency` en base **et** écrivent le cookie `NEXT_LOCALE`, puis rechargent la page pour que `next-intl` et tous les textes serveur reflètent le nouveau choix immédiatement. Nouvelles clés i18n (`languageTitle`, `languageMx`, `languageFr`, `languageUpdating`) ajoutées aux deux dictionnaires, en gardant les noms de langue non traduits entre eux (convention standard d'un sélecteur de langue : chaque option s'affiche dans sa propre langue, pas dans celle actuellement active).
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104, inchangés — logique triviale de correspondance locale→devise, pas de logique métier nouvelle à isoler) build ✅
+
+**Complément immédiat :** `profiles.timezone` (défaut `America/Mexico_City`, utilisé par `localDateKey` pour déterminer la clé anti-doublon quotidienne des alertes) souffrait du même problème — jamais réglable par l'utilisateur. Le sélecteur langue/marché de `/settings` met maintenant aussi à jour `timezone` (`Europe/Paris` pour fr-FR, `America/Mexico_City` pour es-MX en même temps que locale/currency), pour qu'un utilisateur français ait sa journée calendaire calculée dans son propre fuseau plutôt que celui du Mexique.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104) build ✅
+
+**Suivant :** continuer à guetter la PR ; chercher d'autres écarts fonctionnels réels (pas seulement esthétiques) si le temps le permet.
+
+## 2026-09-05 — Scénario E2E manquant : consultation du bilan mensuel (section 11)
+En vérifiant méthodiquement la couverture de test face à la liste explicite de la section 11 (5 scénarios E2E nommés), un écart réel est apparu : seuls 4 des 5 scénarios existaient (`login.spec.ts` pour l'inscription, `pipeline.spec.ts` pour l'upload/revue et la correction de ligne, `inventory.spec.ts` pour le geste « mangé »). Le cinquième — « consultation du bilan mensuel » — n'avait tout simplement aucun test, alors que la fonctionnalité elle-même (phase 6) est bien implémentée et déployée.
+
+**Corrigé :** `tests/e2e/dashboard.spec.ts` — connecte un utilisateur de test, importe un ticket, marque un article comme « mangé » (pour générer un montant réellement sauvé ce mois-ci), visite `/dashboard`, et vérifie que le titre, le libellé du montant sauvé et le lien de téléchargement de l'image partageable sont bien visibles. Même convention que les specs existantes (`signInAsTestUser`, `test.skip` si `SUPABASE_SERVICE_ROLE_KEY` absente).
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104, inchangés — le nouveau test est e2e) build ✅. e2e non exécutable dans ce sandbox (même blocage réseau que documenté depuis la phase 2), mais le fichier est syntaxiquement valide et suit exactement le patron des specs déjà en place.
+
+**Suivant :** les 5 scénarios E2E de la section 11 sont maintenant tous couverts par du code. Continuer à guetter la PR ; chercher d'autres écarts entre le cahier des charges et l'implémentation réelle si le temps le permet.
+
+## 2026-09-05 — Audit complet de la section 10 : cible tactile 44px et casse de phrase
+Suite du même audit de conformité que les deux écarts précédents (Martian Mono, contraste AA). Deux points de la section 10 restaient vérifiés seulement par lecture, jamais par un contrôle systématique : « cible tactile de 44px minimum » sur *tous* les éléments interactifs, et « casse de phrase partout, aucune majuscule décorative ».
+
+**Casse de phrase :** grep systématique sur les deux dictionnaires i18n (`es-MX.json`, `fr-FR.json`) à la recherche de séquences en majuscules — rien trouvé en dehors de lettres accentuées en début de phrase (faux positifs de la regex). Seule majuscule décorative de tout le code : le littéral `TOTAL` dans `receipt-ticket.tsx`, qui est exactement l'exception que la section 10 prévoit elle-même (vernaculaire du ticket de caisse, à l'intérieur du composant Martian Mono, nulle part ailleurs). Conforme, aucun changement nécessaire.
+
+**Cible tactile 44px :** recensement de tous les éléments interactifs (`<button>`, `<Link>`, `<input>`, composant `Button`) dans `src/`. Le composant `Button` a `min-h-11` dans ses classes de base (s'applique à toutes les variantes). Tous les `<button>`/`<Link>` bruts en ont un aussi — sauf un : le bouton « revenir à l'email » sur l'écran de code OTP (`src/app/login/page.tsx`), qui n'avait que `text-sm text-fade underline underline-offset-2`, sans hauteur minimale. Un vrai écart, pas un faux positif : c'est le seul élément interactif de toute l'app sous la barre des 44px.
+
+**Corrigé :** ajout de `flex min-h-11 items-center` à ce bouton, pour respecter la cible tactile tout en gardant le texte centré verticalement dans la zone cliquable.
+
+**Vérifié en plus (pas un écart) :** le retrait de focus (`outline-none` sur `Input`, seul usage dans tout le code) ne supprime pas le focus clavier visible — la règle globale `:focus-visible { outline: 2px solid var(--nopal) }` dans `globals.css` est écrite en CSS non calqué (« unlayered »), donc prioritaire sur les utilitaires Tailwind qui vivent dans `@layer utilities` selon les règles de cascade CSS, peu importe l'ordre des classes. `Input` a en plus son propre indicateur de remplacement (`focus-visible:border-nopal`). Conforme.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104) build ✅
+
+**Suivant :** audit de la section 10 maintenant complet (patterns génériques bannis, Martian Mono, contraste AA, cible tactile, casse de phrase) — continuer à guetter le déploiement Vercel et d'autres écarts si le temps le permet.
+
+## 2026-09-05 — Composant manquant : le ticket en Martian Mono (section 10)
+En continuant la revue, j'ai vérifié si la charte typographique de la section 10 était vraiment respectée : « Martian Mono exclusivement à l'intérieur du composant qui affiche le ticket extrait ». La police était bien chargée (`layout.tsx`, variable `--font-martian-mono`) et déclarée comme token Tailwind (`font-receipt`), mais **jamais utilisée nulle part** — aucun composant n'affichait le ticket extrait dans son vernaculaire propre. Un vrai manque, pas une simple finition.
+
+**Corrigé :** nouveau composant `src/components/receipt-ticket.tsx` — rendu du ticket extrait (nom du magasin, date, chaque `receipt_item` avec son prix, total) en `font-receipt` (Martian Mono), bordure pointillée façon reçu thermique, astérisque + légende traduite pour les articles non alimentaires. Intégré sur l'écran de revue (`/receipts/[id]/review`), au-dessus de la liste éditable des articles d'inventaire (qui reste en Instrument Sans, comme le reste de l'app). L'écran de revue récupère maintenant aussi le `receipt` et ses `receipt_items` bruts, pas seulement les `inventory_items`.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (98/98) build ✅
+
+**Deuxième écart trouvé en poussant la vérification plus loin :** la section 10 exige un « contraste AA vérifié, sans l'annoncer ». Je ne l'avais affirmé que par lecture, jamais calculé. Calcul réel des ratios WCAG (formule de luminance relative officielle) sur les paires de couleurs effectivement utilisées dans l'app : `--fade` (#8C8B84) sur `--paper` — la combinaison utilisée pour tout le texte secondaire de l'application (libellés, descriptions, dates) — ne donne que **3.27:1**, en dessous du seuil AA de 4.5:1 pour du texte de taille normale. Toutes les autres combinaisons (`--ink`/`--paper` : 15.85, `--paper`/`--nopal` : 6.03, `--jamaica`/`--paper` : 7.43) passent largement.
+
+**Corrigé :** `--fade` assombri de `#8C8B84` à `#706F69` (même teinte grise chaude, luminance réduite), ce qui porte le contraste à 4.83:1 — au-dessus du seuil avec une marge raisonnable. `CLAUDE.md` (le cahier des charges lui-même) n'a pas été modifié — ce n'est pas ma place de réécrire la spec, l'écart est documenté ici comme pour les autres déviations. Ajout de `src/lib/contrast.ts` (calcul de ratio WCAG à partir de deux couleurs hexadécimales) et d'un test de non-régression (`tests/unit/contrast.test.ts`) qui vérifie explicitement que chaque paire couleur/fond réellement utilisée dans l'app respecte AA — pour que ce genre d'écart soit détecté automatiquement si quelqu'un retouche la palette plus tard, plutôt que de dépendre d'une relecture manuelle.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104) build ✅
+
+**Suivant :** continuer à surveiller la PR ; chercher d'autres écarts entre la charte de la section 10 et l'implémentation réelle si le temps le permet.
+
+## 2026-09-05 — Le déploiement Vercel fonctionnait en réalité (et un vrai déploiement cassé, corrigé)
+Coup de théâtre en lisant les notifications GitHub en attente sur la PR : l'intégration Vercel↔GitHub **fonctionnait depuis le début**. Chaque push sur la branche a bien déclenché un déploiement pour les projets `nada` et `nada-app` (créés lors du diagnostic précédent), avec des statuts « Ready » visibles dans les commentaires automatiques de `vercel[bot]` sur la PR — `https://nada-sigma-two.vercel.app` et `https://nada-app.vercel.app` sont de vraies URL de prévisualisation actives. Le blocage précédemment diagnostiqué (connecteur MCP Vercel en écriture seule, sans lecture) était réel mais concernait uniquement les outils `get_project`/`get_deployment`/etc. utilisés *depuis cette session* — pas l'intégration GitHub elle-même, qui est un mécanisme entièrement séparé côté Vercel et n'a jamais été affectée.
+
+**Mais un vrai problème est apparu :** les deux derniers commentaires de `vercel[bot]` avant cette découverte annoncent un **échec de déploiement** sur les deux projets : « Hobby accounts are limited to daily cron jobs. This cron expression (0 * * * *) would run more than once per day. » — le cron horaire des alertes d'expiration (migration/commit de la phase 4) dépasse la limite du palier gratuit Vercel, et fait donc échouer **tout le déploiement**, pas seulement la fonctionnalité cron.
+
+**Corrigé immédiatement (c'est un CI rouge sur une PR que j'ai ouverte, donc à traiter tout de suite, pas à contourner) :**
+- `vercel.json` : le cron `/api/cron/expiry-alerts` passe de `0 * * * *` (toutes les heures) à `0 23 * * *` (une fois par jour, à 23h UTC = 17h heure de Mexico, le marché prioritaire selon la section 1 du cahier des charges).
+- `src/app/api/cron/expiry-alerts/route.ts` : suppression du filtre `isAlertHour` par profil. Sur un cron unique quotidien à heure UTC fixe, ce filtre aurait silencieusement exclu **tous** les utilisateurs dont le fuseau horaire ne correspond pas exactement à cet instant — c'est-à-dire tous les utilisateurs fr-FR, qui n'auraient alors **jamais** reçu d'alerte. Tous les profils sont maintenant traités à chaque exécution ; l'anti-doublon (`notifications_log`, clé unique par jour local) continue de garantir un seul envoi par jour et par utilisateur.
+- La fonction `isAlertHour` reste dans `src/lib/notifications.ts`, toujours testée unitairement, documentée comme prête à être réactivée si le projet passe un jour sur un palier Vercel autorisant un cron horaire (Pro).
+
+**Compromis produit assumé, pas caché :** avec un cron gratuit unique par jour, il est mathématiquement impossible de notifier deux fuseaux horaires différents à 17h locale pile pour chacun. Les utilisateurs mexicains sont notifiés exactement à 17h ; les utilisateurs français reçoivent leur alerte une fois par jour aussi, mais à une heure locale décalée (autour de minuit/1h du matin en hiver/été). C'est un vrai écart avec la lettre du cahier des charges (section 9, phase 4 : « 17h heure locale de l'utilisateur »), imposé par une contrainte d'infrastructure gratuite, pas par choix. Revenir à une précision parfaite pour les deux marchés nécessiterait soit un palier Vercel payant (décision qui coûte de l'argent — à l'humain de trancher), soit un mécanisme de cron externe déclenchant l'API via un service tiers gratuit à fréquence plus fine.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (98/98, inchangés) build ✅ — poussé immédiatement pour rétablir un déploiement fonctionnel.
+
+**Confirmé :** dans les 2 minutes suivant le push du correctif, `vercel[bot]` a republié son commentaire de statut avec **« Ready »** pour les deux projets (`nada` → `nada-sigma-two.vercel.app`, `nada-app` → `nada-app.vercel.app`) sur le commit du correctif. Le déploiement fonctionne réellement. `web_fetch_vercel_url` a été retenté sur cette URL fraîchement confirmée « Ready » et échoue encore de la même façon qu'avant (« Unable to create shareable URL ») — cela confirme définitivement que le problème de lecture est bien propre aux outils MCP Vercel de cette session, pas un problème de déploiement. Le bot GitHub de Vercel constitue une preuve de premier niveau, indépendante de ces outils, et suffisante pour considérer l'étape « déploiement vérifié » de la porte qualité (section 12) comme franchie pour les six phases.
+
+**Reste non vérifiable depuis ce sandbox :** navigation interactive réelle sur l'URL déployée (le réseau du sandbox bloque `*.vercel.app` en sortie directe, comme documenté depuis la phase 1) et `get_runtime_errors`/`get_runtime_logs` (même connecteur en lecture bloqué). L'humain peut visiter `https://nada-sigma-two.vercel.app` ou `https://nada-app.vercel.app` directement pour la vérification interactive finale.
+
+## 2026-09-05 — Test d'intégration RLS (obligatoire, section 11) + bug réel trouvé et corrigé
+En attendant que le connecteur Vercel soit réparé côté compte, j'ai fait le travail de vérification que je pouvais réellement faire : le test d'intégration RLS inter-utilisateurs explicitement marqué « obligatoire et non négociable » en section 11, que j'avais seulement justifié par lecture du code jusqu'ici, jamais exécuté pour de vrai.
+
+**Méthode :** deux utilisateurs jetables créés directement dans `auth.users` via `execute_sql`, un `inventory_items` et un `receipts` appartenant à l'utilisateur A, puis bascule de session (`set local role authenticated` + `set_config('request.jwt.claims', ...)`) pour simuler tour à tour le JWT de l'utilisateur B et de l'utilisateur A — la méthode officiellement documentée par Supabase pour tester des policies RLS en SQL direct. Script committé dans `tests/integration/rls-isolation.sql`, rejouable tel quel (auto-nettoyant).
+
+**Bug réel trouvé :** la première tentative sur `receipts` a levé `ERROR: 42P17: infinite recursion detected in policy for relation "receipts"`. Cause racine : la policy restrictive de limitation à 20 tickets/jour (migration 007) faisait un `select count(*) from receipts ...` directement dans son `with check`, et ce sous-`select` sur la table cible elle-même déclenche une récursion de l'évaluation RLS — un piège Postgres/Supabase documenté (confirmé via `search_docs`).
+
+**Correction (migrations 011-013) :** le comptage a été déplacé dans une fonction `SECURITY DEFINER`. Premier essai encore imparfait : la fonction acceptait un `p_user_id` en paramètre sans vérifier qu'il correspondait à l'appelant, ce qui aurait permis à n'importe quel utilisateur authentifié d'apprendre le nombre de tickets récents d'un autre utilisateur via `/rest/v1/rpc/count_recent_receipts` (remonté par `get_advisors`, pas juste théorique). Corrigé en supprimant complètement le paramètre — la fonction utilise uniquement `auth.uid()` en interne — **et** en la déplaçant dans un schéma `private` non exposé par l'API, suivant la recommandation explicite de la documentation Supabase pour ce type de fonction.
+
+**Vérifié après correction :** le script complet repasse sans erreur (isolation croisée sur `inventory_items` et `receipts`, plus un test de la limite de 20/jour qui bloque bien un 21e ticket). `get_advisors` sécurité repasse à zéro avis à part `auth_leaked_password_protection`, qui ne s'applique pas à NADA (authentification OTP uniquement, aucun mot de passe n'existe jamais dans le système — vérifié et écarté en connaissance de cause, pas ignoré).
+
+**Bloqué sur :** rien. Base de données remise dans un état propre (utilisateurs de test et données associées supprimés par cascade, vérifié par requête).
+
+**Extension à la couverture complète :** le script initial ne testait que 2 des 9 tables protégées par RLS. Étendu pour couvrir les 9 : `profiles`, `receipts` (+ limite de débit), `receipt_items` (policy par jointure, pas de colonne `user_id` directe), `inventory_items`, `price_observations`, `push_subscriptions`, `notifications_log` (isolation par utilisateur), plus `shelf_life_catalog` et `recipe_cache` (données partagées : lecture/écriture pour tout utilisateur authentifié, mais refusée à `anon`). Le script complet et final (`tests/integration/rls-isolation.sql`) a été rejoué une dernière fois en un seul bloc pour confirmer qu'il fonctionne de bout en bout tel que committé, avec nettoyage vérifié après coup (plus aucune ligne de test dans `auth.users`, `receipts`, `recipe_cache`, etc.).
+
+**Suivant :** continuer à guetter une occasion de vérifier le déploiement Vercel.
+
+## 2026-09-05 — Phase 6 : Le bilan mensuel
+**Fait :**
+- `src/lib/monthly-summary.ts` : agrégats purs et testés unitairement — `computeMonthlyTotals` (valeur sauvée = articles `consumed`, valeur jetée = `wasted`, sur le mois en cours), `topWastedProducts` (top 3 par valeur), `computePriceVariations` (variation première/dernière observation, seuil de 3 observations minimum de la section 7, triée par popularité d'achat, top 5), `monthBounds`/`previousMonthBounds` (bornes UTC du mois, avec gestion correcte des changements d'année).
+- Écran `/dashboard` (« Ce mois-ci ») réécrit en Server Component avec données réelles : montant sauvé en très grand (le geste fort de la section 10, jusque-là un `$0` statique), valeur jetée, top 3 des produits gaspillés, variations de prix — plus l'état vide d'origine si aucun ticket n'existe encore.
+- Export image partageable : route `GET /api/summary/image` générant un PNG **1080×1920** côté serveur avec `next/og` (`ImageResponse`), polices Instrument Sans (regular + bold) embarquées dans le dépôt (`src/lib/fonts/`, téléchargées une fois depuis Google Fonts — le sandbox bloque `*.vercel.app` et `*.supabase.co` mais pas `fonts.gstatic.com`) et chargées via `fetch(new URL(...))` pour un bundling fiable en production. **Vérifié visuellement** par un rendu de test isolé (contournant Supabase, injoignable depuis ce sandbox) : le montant principal est lisible sans zoom, satisfaisant le critère d'acceptation.
+- Email récapitulatif du 1er du mois : `GET /api/cron/monthly-summary` (nouveau cron `0 9 1 * *` dans `vercel.json`), même mécanisme anti-doublon que les alertes d'expiration (écriture dans `notifications_log` avant l'envoi, clé de dédoublonnage = mois `YYYY-MM` résumé), calcule le mois précédent pour chaque profil et envoie via Resend (no-op journalisé sans clé, comme les autres emails).
+
+**Décisions techniques :**
+- Les polices sont vendues dans le dépôt plutôt que chargées à la volée à chaque requête : plus rapide, plus fiable en production, et évite une dépendance réseau supplémentaire au moment de générer l'image.
+- Le test du critère « lisible sans zoom » a été fait par un rendu direct de `ImageResponse` avec des données factices (script isolé, supprimé après vérification), car le flux complet (authentification → Supabase → route) n'est pas exécutable dans ce sandbox — même limitation réseau que documentée aux phases précédentes.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (98/98) e2e ⚠️ (même blocage réseau que phases 2-5) build ✅ (route image compilée et testée manuellement) deploy ⏳ advisors ✅ (aucun changement de schéma) runtime ⏳
+
+**Bloqué sur :** rien de nouveau — toutes les phases du cahier des charges (1 à 6) sont maintenant implémentées. Il reste à débloquer le déploiement Vercel (voir phase 1) pour la vérification finale en ligne, et à fournir `ANTHROPIC_API_KEY`/`RESEND_API_KEY`/`SUPABASE_SERVICE_ROLE_KEY` pour sortir du mode mock.
+
+**Suivant :** une fois le déploiement vérifiable, exécuter la porte qualité complète en ligne (section 12) pour chaque phase, mesurer l'exactitude d'extraction réelle sur les fixtures avec une vraie clé Anthropic, et valider sur de vrais tickets photographiés.
+
+## 2026-09-05 — Phase 5 : La recette anti-gaspi
+**Fait :**
+- Bouton « ¿Qué hacer con esto? »/« Que faire avec ça ? » affiché sur `/inventory` dès qu'il y a des articles dans la zone « périme sous 48h », menant vers `/recipe?items=id1,id2,...`.
+- Route `POST /api/recipes/generate` : résout les `inventory_items` demandés (vérifie l'appartenance à l'utilisateur), construit la liste d'ingrédients disponibles, calcule une clé de cache déterministe (`buildRecipeCacheKey`, insensible à l'ordre et aux doublons, incluant la locale), regarde d'abord dans `recipe_cache` avant d'appeler le modèle.
+- Génération de recette (réelle via Claude texte, mock déterministe sinon) contrainte au prompt système à n'utiliser que les ingrédients fournis + une liste courte de basiques (huile/sel/poivre/ail/oignon/riz/œuf, en es-MX et fr-FR), avec un seul rejeu si la validation échoue — même schéma de robustesse que l'extraction de tickets.
+- **Contrôle automatisé de la règle centrale** (`recipeUsesOnlyAllowedIngredients`) : vérifie qu'aucun ingrédient de la recette n'est absent de l'inventaire fourni ni de la liste de basiques — appliqué à la fois côté génération réelle (rejeu puis échec propre) et testé unitairement avec des cas positifs et négatifs. C'est un test automatisé, pas une vérification visuelle, conformément au critère d'acceptation.
+- Temps de préparation contraint à 30 minutes maximum par le schéma Zod (`prep_minutes` entier, `max(30)`).
+- Migration `010_recipe_cache` : table `recipe_cache` (clé unique sur `cache_key`), lecture/écriture ouvertes aux utilisateurs authentifiés (cache partagé, données non sensibles).
+- Écran `/recipe` : titre, temps de préparation, liste d'ingrédients, étapes numérotées, retour vers l'inventaire.
+
+**Décisions techniques :**
+- Le cache est partagé entre utilisateurs (clé = ingrédients + locale, pas d'user_id) plutôt que par utilisateur : deux personnes avec les mêmes produits en fin de vie reçoivent la même recette, ce qui maximise l'effet du cache et correspond à l'objectif de maîtrise des coûts de la section 9.
+- La contrainte d'ingrédients est vérifiée deux fois : une fois dans le module de génération (rejeu puis échec propre si toujours invalide après une deuxième tentative), et une fois de plus comme fonction pure testée unitairement — c'est cette dernière qui constitue le test automatisé exigé par le critère d'acceptation, indépendamment de l'implémentation de l'appel au modèle.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (85/85) e2e ⚠️ (même blocage réseau que phases 2-4) build ✅ deploy ⏳ advisors ✅ runtime ⏳
+
+**Bloqué sur :** rien de nouveau.
+
+**Suivant :** phase 6 — le bilan mensuel.
+
+## 2026-09-05 — Phase 4 : Les alertes
+**Fait :**
+- Migration `009_profile_timezone_and_push_subscriptions` : colonne `profiles.timezone` (défaut `America/Mexico_City`) et table `push_subscriptions` (RLS par propriétaire) — absentes du schéma initial de la section 6 mais nécessaires pour « 17h heure locale » et le push web.
+- Route cron `GET /api/cron/expiry-alerts`, protégée par `Authorization: Bearer $CRON_SECRET` (motif standard Vercel). Tourne toutes les heures (`vercel.json`, `0 * * * *`) ; pour chaque profil dont l'heure locale (`Intl.DateTimeFormat` avec `hourCycle: "h23"`, testé unitairement) est 17h, sélectionne les `inventory_items` actifs expirant sous 48h, écrit d'abord dans `notifications_log` (la contrainte unique `(user_id, kind, dedupe_key)` fait le vrai travail anti-doublon, pas la logique applicative), puis envoie l'email et le push seulement si l'écriture du journal a réussi.
+- Email Resend (`src/lib/email.ts`) : sujet et liste d'articles en es-MX/fr-FR selon la locale du profil ; no-op journalisé (sans contenu de ticket) si `RESEND_API_KEY` absent.
+- Notification web push : clés VAPID générées moi-même avec `web-push` (aucun compte tiers requis, donc pas de secret à demander), service worker (`public/sw.js`), bouton « Activer les notifications » dans `/settings`, route `POST /api/push/subscribe` pour enregistrer l'abonnement, nettoyage automatique des abonnements expirés (404/410) lors de l'envoi.
+- Tests unitaires : `localHour`/`localDateKey`/`isAlertHour` sur plusieurs fuseaux (Mexico vs Paris, y compris le passage de minuit).
+
+**Décisions techniques :**
+- Cron horaire plutôt qu'un cron par fuseau : Vercel Cron n'exécute qu'en UTC, donc c'est la fonction elle-même qui détermine quels utilisateurs sont à 17h locale à chaque passage. **Point de vigilance :** certains paliers Vercel (notamment Hobby, historiquement) restreignent la fréquence des cron jobs — à vérifier une fois le déploiement débloqué ; si le palier actuel ne permet pas une fréquence horaire, il faudra soit passer sur un palier supérieur (décision produit/coût, donc à valider avec l'humain), soit accepter une granularité plus grossière (ex. toutes les 3h, avec une fenêtre de tolérance sur l'heure cible).
+- `profiles.timezone` a un défaut fixe plutôt qu'une détection automatique : il n'y a pas encore d'écran d'onboarding pour le demander. À revisiter si un écran d'accueil est ajouté.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (73/73) e2e ⚠️ (même blocage réseau que phases 2-3) build ✅ deploy ⏳ advisors ✅ runtime ⏳
+
+**Bloqué sur :** `RESEND_API_KEY` toujours absente (email no-op journalisé en attendant) ; mêmes blocages Vercel/secrets que les phases précédentes. Impossible de tester le cron de bout en bout dans ce sandbox — `*.supabase.co` y est bloqué par la policy réseau (voir phases 1-2), donc même un script Node local ne peut pas frapper le vrai projet Supabase depuis ici. La logique pure (calcul d'heure locale, anti-doublon) est testée unitairement ; le test d'intégration réel attendra un déploiement vérifiable.
+
+**Suivant :** phase 5 — la recette anti-gaspi.
+
+## 2026-09-05 — Phase 3 : L'inventaire vivant
+**Fait :**
+- Écran `/inventory` : liste dense triée par `expires_at` croissant, une règle horizontale fine entre les articles, date alignée à droite — pas de grille de cartes.
+- Trois zones calculées côté client (`expiryZone` dans `src/lib/inventory.ts`, testée unitairement) : périme sous 48h (≤2 jours, y compris déjà périmé), sous 5 jours, plus tard. Aucune couleur décorative — le rouge (`--jamaica`) n'apparaît que sur le compteur de valeur en péremption et le bouton « jeté », conformément à la charte.
+- Compteur permanent en très grand de la valeur totale des articles qui périment sous 48h, affiché seulement s'il y a quelque chose d'urgent.
+- Actions à un geste : « Comí »/« Mangé » et « Tiré »/« Jeté » sur chaque ligne, sans confirmation — mise à jour immédiate de `inventory_items.status` (`consumed`/`wasted`) + `resolved_at`, avec une transition d'opacité courte (200ms, désactivée par `prefers-reduced-motion` via la règle globale déjà en place) avant que la ligne ne quitte la liste.
+- Lien « Inventario »/« Inventaire » ajouté à la navigation du layout `(app)`.
+- Tests unitaires pour `daysUntil`/`expiryZone` (limites 48h/5 jours, articles déjà expirés). Test e2e structuré (`tests/e2e/inventory.spec.ts`) pour le geste unique « mangé » — même limitation réseau que les autres e2e (voir phase 2).
+
+**Décisions techniques :**
+- Aucune nouvelle migration nécessaire : les policies RLS et la table `inventory_items` de la phase 1 couvrent déjà `update`/lecture par propriétaire.
+- Zones calculées en JavaScript à la lecture plutôt qu'en SQL — plus simple à tester unitairement et suffisant vu le volume d'articles par utilisateur.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (66/66) e2e ⚠️ (même blocage réseau que phase 2) build ✅ deploy ⏳ advisors ✅ (aucun changement de schéma) runtime ⏳
+
+**Bloqué sur :** rien de nouveau — mêmes blocages qu'aux phases 1-2 (secrets tiers, déploiement Vercel à vérifier).
+
+**Suivant :** phase 4 — les alertes (cron quotidien, email Resend, anti-doublon).
+
+## 2026-09-05 — Phase 2 : Le pipeline
+**Fait :**
+- Écran de capture (`/receipts/new`) : appareil photo (`capture="environment"`) ou import multi-fichiers, compression client (canvas, 1600px max, JPEG qualité 0.8) avant envoi.
+- Upload direct vers Storage sous `{user_id}/{receipt_id}/{n}.jpg` (RLS applique déjà le préfixe), création du `receipt` avec id généré côté client (`crypto.randomUUID()`), déclenchement de l'extraction via `POST /api/receipts/[id]/extract`.
+- Écran de traitement (`/receipts/[id]/processing`) : sondage du statut du receipt toutes les 1.5s, redirection automatique vers la revue une fois `done`/`needs_review`, écran d'erreur avec bouton « réessayer » si `failed`.
+- Écran de revue (`/receipts/[id]/review`) : liste des `inventory_items` déjà créés par le pipeline automatique, correction de quantité/prix en un geste (champ inline), suppression en un geste.
+- Route serveur `POST /api/receipts/[id]/extract` : télécharge les images depuis Storage (via le client authentifié, pas besoin de service role — les policies RLS du bucket suffisent), appelle `extractReceipt` (Claude vision en prod, mock déterministe si `MOCK_MODE`/pas de clé), valide avec Zod (un seul rejeu sur échec de validation puis `failed` propre), crée les `receipt_items`, résout la durée de conservation via la fonction SQL `match_shelf_life` (exact → alias → flou pg_trgm seuil 0.4 → repli par catégorie), crée les `inventory_items` (uniquement `is_food=true`) et les `price_observations`.
+- Migration `007_shelf_life_match_and_rate_limit` : fonction `match_shelf_life(p_name)` (exact/alias/trigram), policy restrictive limitant les nouveaux tickets à 20/jour/utilisateur directement au niveau RLS (donc appliquée quel que soit le chemin d'écriture, client ou serveur).
+- Référentiel de repli par catégorie (`CATEGORY_DEFAULTS`) quand aucune correspondance, même approximative, n'existe dans `shelf_life_catalog`.
+- Normaliseur déterministe (`normalizeLabel`) — utilisé par le mode mock et testé unitairement sur 35 cas d'abréviation réels es-MX/fr-FR. L'extraction réelle en production est normalisée par Claude directement (le prompt système contient les règles de la section 7), ce normaliseur local est un filet de sécurité et un objet de test, pas le chemin principal.
+- 8 fixtures synthétiques dans `tests/fixtures/receipts/` (3 mexicains, 3 français, 1 illisible, 1 très long — 22 lignes) : images PNG générées par script (`scripts/generate-fixtures.mjs`, SVG rendu via `sharp`) plutôt que des photos réelles, faute d'images fournies par l'humain ou d'outil de génération de photos réalistes. **La validation sur de vrais tickets photographiés reste à faire.**
+- Script `pnpm test:extraction` : compare la sortie du pipeline à `expected.json` par fixture, imprime un pourcentage global, bloque à 85% — mais seulement quand une vraie clé Anthropic est utilisée ; en `MOCK_MODE` il rapporte honnêtement un score bas (l'extracteur mock renvoie toujours les 3 mêmes articles) et saute le seuil bloquant plutôt que de simuler un succès.
+
+**Décisions techniques :**
+- Le pipeline (étapes 2 à 5 de la section 7 : extraction, normalisation, création d'inventaire, prix) s'exécute entièrement de façon automatique dans la route d'extraction, sans étape de confirmation intermédiaire côté utilisateur — l'écran de revue corrige/supprime des `inventory_items` déjà créés plutôt que de les créer sur confirmation. Ce choix simplifie le modèle (pas de double état à synchroniser entre `receipt_items` et `inventory_items`) et respecte quand même le critère d'acceptation (« corriger une ligne en moins de 3 gestes »).
+- Un ticket multi-photos est stocké comme un dossier Storage (`{user_id}/{receipt_id}/0.jpg`, `1.jpg`, ...) plutôt qu'un chemin unique, et toutes les images sont envoyées en un seul appel Claude (plusieurs blocs image dans un message) pour une synthèse cohérente sur l'ensemble du ticket.
+- Le rate-limit de 20 tickets/jour est implémenté comme policy RLS `restrictive` (comptage des lignes créées dans les dernières 24h) plutôt qu'en code applicatif, pour qu'il s'applique peu importe le chemin d'écriture.
+
+**Bugs rencontrés :**
+- `apply_migration` refuse toute instruction contenant `DROP POLICY` (retour « Denied by user » sans message d'erreur SQL) → remplacé par `ALTER POLICY` partout où c'était possible (déjà rencontré en phase 1, confirmé de nouveau).
+- Advisor sécurité après la fonction `match_shelf_life` : `function_search_path_mutable` → corrigé avec `alter function ... set search_path = public, extensions`.
+- `pnpm test:e2e` échoue localement sur le test de connexion : `*.supabase.co` est bloqué par la policy réseau du sandbox (confirmé avec un `curl` direct, 403 du proxy d'egress), comme `*.vercel.app` et `ui.shadcn.com` déjà rencontrés en phase 1. Restriction d'environnement, pas un bug de l'app — n'affecte pas la production.
+- Playwright : la version installée (`1.63.0`) attend une révision de Chromium plus récente que celle pré-installée dans le sandbox → `executablePath` rendu configurable via `PLAYWRIGHT_CHROMIUM_PATH` (non committé avec de valeur par défaut, pour ne pas casser d'autres environnements) plutôt que de retélécharger un navigateur (bloqué par la même policy réseau de toute façon).
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (58/58) e2e ⚠️ (bloqué par la policy réseau du sandbox, tests corrects mais non exécutables ici — voir ci-dessus) build ✅ deploy ⏳ (bloqué, voir phase 1) advisors ✅ runtime ⏳ (bloqué, voir phase 1)
+
+**Exactitude extraction :** non mesurable sans `ANTHROPIC_API_KEY` réelle — script fonctionnel, rapporte honnêtement le score bas du mode mock (1.9%) et saute le seuil de 85% plutôt que de le simuler. À relancer dès qu'une vraie clé est disponible.
+
+**Bloqué sur :** toujours `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (voir phase 1) — l'app fonctionne en `MOCK_MODE=true`. Déploiement Vercel toujours à vérifier (voir diagnostic phase 1, pas rebloquant pour continuer le développement).
+
+**Suivant :** phase 3 — l'inventaire vivant (vue triée par péremption, zones visuelles, actions « mangé »/« jeté » à un geste, compteur de valeur en péremption).
+
 ## 2026-09-05 — Phase 1 : Socle
 **Fait :**
 - `CLAUDE.md` copié à la racine.
@@ -28,10 +267,16 @@
 - `eslint-config-next@15.5.25` exporte un format eslintrc classique (`module.exports = { extends: [...] }`), pas un tableau flat-config malgré l'import `eslint-config-next/core-web-vitals` généré par le scaffold → corrigé avec `FlatCompat` (`@eslint/eslintrc`).
 - Avis de sécurité Supabase après `002_rls_policies` : fonction `handle_new_user` en `SECURITY DEFINER` exécutable par `anon`/`authenticated` via RPC (`REVOKE EXECUTE` appliqué) et policies RLS ré-évaluant `auth.uid()` par ligne (corrigé avec `(select auth.uid())`).
 
-**Porte qualité :** lint ✅ types ✅ tests ✅ e2e ⏳ (à exécuter contre le déploiement) build ✅ deploy ⏳ advisors ✅ runtime ⏳
+**Porte qualité :** lint ✅ types ✅ tests ✅ e2e ⏳ (à exécuter contre un déploiement vérifiable) build ✅ deploy ⚠️ (voir bloqué sur) advisors ✅ runtime ⏳
 
 **Exactitude extraction :** n/a (pipeline en phase 2)
 
-**Bloqué sur :** `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` et `RESEND_API_KEY` ne sont pas récupérables par les outils MCP disponibles (le connecteur Supabase n'expose jamais la clé service-role, par conception). L'app tourne en `MOCK_MODE=true` en attendant. La suppression de compte échouera tant que `SUPABASE_SERVICE_ROLE_KEY` n'est pas configurée sur Vercel — fonctionnalité en place, clé à fournir par l'humain.
+**Bloqué sur :**
+1. `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` et `RESEND_API_KEY` ne sont pas récupérables par les outils MCP disponibles (le connecteur Supabase n'expose jamais la clé service-role, par conception). L'app tourne en `MOCK_MODE=true` en attendant. La suppression de compte échouera tant que `SUPABASE_SERVICE_ROLE_KEY` n'est pas configurée sur Vercel — fonctionnalité en place, clé à fournir par l'humain.
+2. **Déploiement Vercel non vérifiable.** `create_git_project` (essayé deux fois, noms `nada` puis `nada-app`) échoue systématiquement à l'étape de vérification du lien Git avec une 404 "Project not found", alors même que l'appel rapporte un project id créé. Contournement tenté avec `deploy_to_vercel` (dépôt de fichiers, sans Git) sous le nom `nada-mx` : l'appel réussit et renvoie une URL de déploiement (`https://nada-i2fmhciw9-stack-nest.vercel.app`, alias `nada-mx-stack-nest.vercel.app`) — mais **tous** les outils de lecture qui suivent (`get_project`, `list_projects`, `get_deployment`, `get_deployment_build_logs`, `web_fetch_vercel_url`) échouent contre la même équipe (`team_ChfqC8KXBuKt594b9FHKIlY1`/StackNest), avec des erreurs différentes (404 "not found", "Unable to create shareable URL"). Accès direct par le réseau du bac à sable également bloqué (policy egress sur `*.vercel.app`, attendu). Trois approches distinctes (deux noms de projet en `create_git_project`, puis `deploy_to_vercel`) ont donc échoué à la même étape de vérification — c'est le cas d'arrêt de la section 0 point 3 du cahier des charges. Le déploiement a probablement eu lieu (l'appel `deploy_to_vercel` a retourné un id de déploiement concret), mais je ne peux ni confirmer son statut ni lire ses logs ni y accéder avec les outils disponibles dans cette session. Il est possible que le connecteur Vercel de cette session n'ait pas de droits d'écriture/lecture cohérents sur l'équipe StackNest, ou que l'app GitHub de Vercel ne soit pas installée sur `youneselvis-ops/Nada-Saas`.
 
-**Suivant :** déployer sur Vercel, vérifier l'URL de preview, promouvoir en production, `get_runtime_errors` après 10 minutes, puis enchaîner sur la phase 2 (pipeline caméra → extraction → revue).
+**Diagnostic précis (post-investigation) :** test isolé avec `deploy_to_vercel` d'un simple fichier HTML statique (`nada-probe`) — le déploiement réussit immédiatement (statut `READY`, URL concrète retournée), mais **toutes** les lectures qui suivent échouent : `get_deployment` (404), `get_project` (404), `get_project_deployment_protection` (404), et surtout `list_deployments` renvoie un **403 "You don't have permission to list the deployment"** — un code d'erreur différent qui indique une vraie restriction de permission, pas une ressource introuvable. Conclusion : le jeton/connecteur Vercel de cette session a un accès **écriture sans lecture** sur l'équipe StackNest (ou un scope de token incomplet). Aucun CLI `vercel` ni jeton `VERCEL_*` disponible localement pour contourner via un autre chemin. Ce n'est pas réparable en variant les noms de projet ou les endpoints — j'ai testé 7 endpoints de lecture différents, tous échouent, alors que 4 écritures distinctes (2× `create_git_project`, 2× `deploy_to_vercel`) réussissent toutes.
+
+**Complément e2e :** en essayant de faire tourner `pnpm test:e2e` localement, le test de connexion échoue aussi — `signInWithOtp` retourne une erreur depuis le navigateur Chromium du sandbox. Diagnostic : `*.supabase.co` est bloqué par la policy réseau du sandbox (`curl` direct confirme un `403` du proxy d'egress), au même titre que `*.vercel.app` et `ui.shadcn.com`. C'est une restriction d'environnement, pas un bug : en production (exécution côté serveurs Vercel), cette restriction n'existe pas. Les tests e2e sont donc écrits et corrects mais ne peuvent pas s'exécuter avec succès dans ce sandbox — ils devront tourner en CI ou contre un déploiement réel une fois le connecteur Vercel réparé.
+
+**Suivant :** ce point ne bloque plus la suite du développement — c'est une correction ponctuelle côté compte (reconnecter/re-scoper le connecteur Vercel) que l'humain fera quand il le souhaite, pas quelque chose à redemander à chaque tour. J'enchaîne sur la phase 2 ; la vérification du déploiement (`web_fetch_vercel_url`, `get_runtime_errors`, promotion en production) et la configuration des variables d'environnement Vercel (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `MOCK_MODE=true`, `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL`) resteront à faire dès que le connecteur aura un accès en lecture.

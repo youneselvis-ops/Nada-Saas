@@ -1,0 +1,59 @@
+{
+  "store_name": "Mercado Sobre Ruedas",
+  "purchased_at": null,
+  "currency": "MXN",
+  "total_amount": 116,
+  "confidence": 0.85,
+  "items": [
+    {
+      "raw_label": "AGUACATE HASS KG",
+      "normalized_name": "aguacate",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "kg",
+      "unit_price": 45,
+      "total_price": 45,
+      "is_food": true
+    },
+    {
+      "raw_label": "TOMATE BOLA KG",
+      "normalized_name": "tomate",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "kg",
+      "unit_price": 20,
+      "total_price": 20,
+      "is_food": true
+    },
+    {
+      "raw_label": "CEBOLLA KG",
+      "normalized_name": "cebolla",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "kg",
+      "unit_price": 18,
+      "total_price": 18,
+      "is_food": true
+    },
+    {
+      "raw_label": "LIMON KG",
+      "normalized_name": "limon",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "kg",
+      "unit_price": 25,
+      "total_price": 25,
+      "is_food": true
+    },
+    {
+      "raw_label": "CILANTRO MANOJO",
+      "normalized_name": "cilantro",
+      "category": "produce",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 8,
+      "total_price": 8,
+      "is_food": true
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "store_name": "Oxxo Sucursal Centro",
+  "purchased_at": "2026-09-02",
+  "currency": "MXN",
+  "total_amount": 147,
+  "confidence": 0.88,
+  "items": [
+    {
+      "raw_label": "AGUA CIEL 1L",
+      "normalized_name": "agua",
+      "category": "beverage",
+      "quantity": 1,
+      "unit": "l",
+      "unit_price": 15,
+      "total_price": 15,
+      "is_food": true
+    },
+    {
+      "raw_label": "REFRESCO COCA 600ML",
+      "normalized_name": "refresco",
+      "category": "beverage",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 18,
+      "total_price": 18,
+      "is_food": true
+    },
+    {
+      "raw_label": "SABRITAS ORIG 45G",
+      "normalized_name": "sabritas",
+      "category": "pantry",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 17,
+      "total_price": 17,
+      "is_food": true
+    },
+    {
+      "raw_label": "PAN BIMBO CH",
+      "normalized_name": "pan",
+      "category": "bakery",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 22,
+      "total_price": 22,
+      "is_food": true
+    },
+    {
+      "raw_label": "CIGARROS MARL",
+      "normalized_name": "cigarros",
+      "category": "household",
+      "quantity": 1,
+      "unit": "unit",
+      "unit_price": 75,
+      "total_price": 75,
+      "is_food": false
+    }
+  ]
+}
