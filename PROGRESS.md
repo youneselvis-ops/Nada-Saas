@@ -13,7 +13,9 @@ En attendant que le connecteur Vercel soit réparé côté compte, j'ai fait le 
 
 **Bloqué sur :** rien. Base de données remise dans un état propre (utilisateurs de test et données associées supprimés par cascade, vérifié par requête).
 
-**Suivant :** continuer à guetter une occasion de vérifier le déploiement Vercel ; en attendant, revue de code ciblée sur les autres policies RLS combinant plusieurs contraintes, pour détecter d'éventuels autres pièges de ce type avant qu'un humain ne les découvre en production.
+**Extension à la couverture complète :** le script initial ne testait que 2 des 9 tables protégées par RLS. Étendu pour couvrir les 9 : `profiles`, `receipts` (+ limite de débit), `receipt_items` (policy par jointure, pas de colonne `user_id` directe), `inventory_items`, `price_observations`, `push_subscriptions`, `notifications_log` (isolation par utilisateur), plus `shelf_life_catalog` et `recipe_cache` (données partagées : lecture/écriture pour tout utilisateur authentifié, mais refusée à `anon`). Le script complet et final (`tests/integration/rls-isolation.sql`) a été rejoué une dernière fois en un seul bloc pour confirmer qu'il fonctionne de bout en bout tel que committé, avec nettoyage vérifié après coup (plus aucune ligne de test dans `auth.users`, `receipts`, `recipe_cache`, etc.).
+
+**Suivant :** continuer à guetter une occasion de vérifier le déploiement Vercel.
 
 ## 2026-09-05 — Phase 6 : Le bilan mensuel
 **Fait :**
