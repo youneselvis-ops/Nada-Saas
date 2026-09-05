@@ -7,6 +7,10 @@ En cherchant d'autres écarts après l'audit design/tests, j'ai vérifié un poi
 
 **Porte qualité :** lint ✅ types ✅ tests ✅ (104/104, inchangés — logique triviale de correspondance locale→devise, pas de logique métier nouvelle à isoler) build ✅
 
+**Complément immédiat :** `profiles.timezone` (défaut `America/Mexico_City`, utilisé par `localDateKey` pour déterminer la clé anti-doublon quotidienne des alertes) souffrait du même problème — jamais réglable par l'utilisateur. Le sélecteur langue/marché de `/settings` met maintenant aussi à jour `timezone` (`Europe/Paris` pour fr-FR, `America/Mexico_City` pour es-MX en même temps que locale/currency), pour qu'un utilisateur français ait sa journée calendaire calculée dans son propre fuseau plutôt que celui du Mexique.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (104/104) build ✅
+
 **Suivant :** continuer à guetter la PR ; chercher d'autres écarts fonctionnels réels (pas seulement esthétiques) si le temps le permet.
 
 ## 2026-09-05 — Scénario E2E manquant : consultation du bilan mensuel (section 11)

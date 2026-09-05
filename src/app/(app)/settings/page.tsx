@@ -7,9 +7,9 @@ import { isPushSupported, subscribeToPush } from "@/lib/push-client";
 import { createClient } from "@/lib/supabase/client";
 import type { Locale } from "@/i18n/config";
 
-const MARKETS: Record<Locale, { currency: string }> = {
-  "es-MX": { currency: "MXN" },
-  "fr-FR": { currency: "EUR" },
+const MARKETS: Record<Locale, { currency: string; timezone: string }> = {
+  "es-MX": { currency: "MXN", timezone: "America/Mexico_City" },
+  "fr-FR": { currency: "EUR", timezone: "Europe/Paris" },
 };
 
 export default function SettingsPage() {
@@ -49,7 +49,11 @@ export default function SettingsPage() {
     if (user) {
       await supabase
         .from("profiles")
-        .update({ locale: next, currency: MARKETS[next].currency })
+        .update({
+          locale: next,
+          currency: MARKETS[next].currency,
+          timezone: MARKETS[next].timezone,
+        })
         .eq("id", user.id);
     }
     document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=31536000`;
