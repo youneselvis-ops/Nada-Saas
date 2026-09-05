@@ -1,5 +1,20 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Test d'intégration RLS (obligatoire, section 11) + bug réel trouvé et corrigé
+En attendant que le connecteur Vercel soit réparé côté compte, j'ai fait le travail de vérification que je pouvais réellement faire : le test d'intégration RLS inter-utilisateurs explicitement marqué « obligatoire et non négociable » en section 11, que j'avais seulement justifié par lecture du code jusqu'ici, jamais exécuté pour de vrai.
+
+**Méthode :** deux utilisateurs jetables créés directement dans `auth.users` via `execute_sql`, un `inventory_items` et un `receipts` appartenant à l'utilisateur A, puis bascule de session (`set local role authenticated` + `set_config('request.jwt.claims', ...)`) pour simuler tour à tour le JWT de l'utilisateur B et de l'utilisateur A — la méthode officiellement documentée par Supabase pour tester des policies RLS en SQL direct. Script committé dans `tests/integration/rls-isolation.sql`, rejouable tel quel (auto-nettoyant).
+
+**Bug réel trouvé :** la première tentative sur `receipts` a levé `ERROR: 42P17: infinite recursion detected in policy for relation "receipts"`. Cause racine : la policy restrictive de limitation à 20 tickets/jour (migration 007) faisait un `select count(*) from receipts ...` directement dans son `with check`, et ce sous-`select` sur la table cible elle-même déclenche une récursion de l'évaluation RLS — un piège Postgres/Supabase documenté (confirmé via `search_docs`).
+
+**Correction (migrations 011-013) :** le comptage a été déplacé dans une fonction `SECURITY DEFINER`. Premier essai encore imparfait : la fonction acceptait un `p_user_id` en paramètre sans vérifier qu'il correspondait à l'appelant, ce qui aurait permis à n'importe quel utilisateur authentifié d'apprendre le nombre de tickets récents d'un autre utilisateur via `/rest/v1/rpc/count_recent_receipts` (remonté par `get_advisors`, pas juste théorique). Corrigé en supprimant complètement le paramètre — la fonction utilise uniquement `auth.uid()` en interne — **et** en la déplaçant dans un schéma `private` non exposé par l'API, suivant la recommandation explicite de la documentation Supabase pour ce type de fonction.
+
+**Vérifié après correction :** le script complet repasse sans erreur (isolation croisée sur `inventory_items` et `receipts`, plus un test de la limite de 20/jour qui bloque bien un 21e ticket). `get_advisors` sécurité repasse à zéro avis à part `auth_leaked_password_protection`, qui ne s'applique pas à NADA (authentification OTP uniquement, aucun mot de passe n'existe jamais dans le système — vérifié et écarté en connaissance de cause, pas ignoré).
+
+**Bloqué sur :** rien. Base de données remise dans un état propre (utilisateurs de test et données associées supprimés par cascade, vérifié par requête).
+
+**Suivant :** continuer à guetter une occasion de vérifier le déploiement Vercel ; en attendant, revue de code ciblée sur les autres policies RLS combinant plusieurs contraintes, pour détecter d'éventuels autres pièges de ce type avant qu'un humain ne les découvre en production.
+
 ## 2026-09-05 — Phase 6 : Le bilan mensuel
 **Fait :**
 - `src/lib/monthly-summary.ts` : agrégats purs et testés unitairement — `computeMonthlyTotals` (valeur sauvée = articles `consumed`, valeur jetée = `wasted`, sur le mois en cours), `topWastedProducts` (top 3 par valeur), `computePriceVariations` (variation première/dernière observation, seuil de 3 observations minimum de la section 7, triée par popularité d'achat, top 5), `monthBounds`/`previousMonthBounds` (bornes UTC du mois, avec gestion correcte des changements d'année).
