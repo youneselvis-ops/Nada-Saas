@@ -38,5 +38,33 @@
     "confirmDelete": "Oui, tout supprimer",
     "deleting": "Suppression...",
     "cancel": "Annuler"
+  },
+  "capture": {
+    "title": "Photographie ton ticket",
+    "subtitle": "Une photo par page du ticket. Tu peux en prendre plusieurs.",
+    "addPhoto": "Prendre ou choisir une photo",
+    "photoCount": "{count} photo ajoutée|{count} photos ajoutées",
+    "submit": "Extraire les produits",
+    "uploading": "Envoi...",
+    "error": "Impossible d'envoyer le ticket. Réessaie.",
+    "removePhoto": "Retirer"
+  },
+  "processing": {
+    "title": "Lecture du ticket...",
+    "subtitle": "Cela prend quelques secondes.",
+    "failedTitle": "Impossible de lire ce ticket",
+    "failedSubtitle": "Réessaie avec une photo plus nette et bien éclairée.",
+    "retry": "Réessayer"
+  },
+  "review": {
+    "title": "Vérifie ton inventaire",
+    "subtitle": "Corrige ce qu'il faut avant de continuer.",
+    "needsReview": "Confiance faible — vérifie les prix et quantités.",
+    "emptyTitle": "Aucun produit alimentaire détecté",
+    "emptySubtitle": "Tu peux repartir avec une nouvelle photo.",
+    "delete": "Retirer",
+    "quantityLabel": "Quantité",
+    "priceLabel": "Prix",
+    "done": "Terminé, voir l'inventaire"
   }
 }

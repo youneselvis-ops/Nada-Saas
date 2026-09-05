@@ -38,5 +38,33 @@
     "confirmDelete": "Sí, borrar todo",
     "deleting": "Borrando...",
     "cancel": "Cancelar"
+  },
+  "capture": {
+    "title": "Fotografía tu ticket",
+    "subtitle": "Una foto por página del ticket. Puedes tomar varias.",
+    "addPhoto": "Tomar o elegir foto",
+    "photoCount": "{count} foto agregada|{count} fotos agregadas",
+    "submit": "Extraer productos",
+    "uploading": "Subiendo...",
+    "error": "No se pudo subir el ticket. Intenta de nuevo.",
+    "removePhoto": "Quitar"
+  },
+  "processing": {
+    "title": "Leyendo tu ticket...",
+    "subtitle": "Esto toma unos segundos.",
+    "failedTitle": "No pudimos leer este ticket",
+    "failedSubtitle": "Intenta con una foto más clara y bien iluminada.",
+    "retry": "Volver a intentar"
+  },
+  "review": {
+    "title": "Revisa tu inventario",
+    "subtitle": "Corrige lo que haga falta antes de continuar.",
+    "needsReview": "Confianza baja — revisa los precios y cantidades.",
+    "emptyTitle": "No se detectaron productos alimenticios",
+    "emptySubtitle": "Puedes fotografiar el ticket de nuevo.",
+    "delete": "Quitar",
+    "quantityLabel": "Cantidad",
+    "priceLabel": "Precio",
+    "done": "Listo, ir al inventario"
   }
 }

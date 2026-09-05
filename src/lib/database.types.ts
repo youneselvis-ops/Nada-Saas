@@ -287,7 +287,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_shelf_life: {
+        Args: { p_name: string }
+        Returns: {
+          aliases: string[]
+          category: string
+          days_freezer: number | null
+          days_fridge: number | null
+          days_pantry: number | null
+          default_storage: string
+          normalized_name: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
