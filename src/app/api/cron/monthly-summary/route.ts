@@ -28,40 +28,47 @@ export async function GET(request: Request) {
 
   let sent = 0;
 
+  // Isolated per profile, same reasoning as the expiry-alerts cron: one
+  // delivery failure must never abort the loop and starve every profile
+  // queued after it.
   for (const profile of profiles) {
-    const { error: logError } = await admin.from("notifications_log").insert({
-      user_id: profile.id,
-      kind: "monthly_summary",
-      payload: { dedupe_key: dedupeKey },
-    });
-    if (logError) continue;
+    try {
+      const { error: logError } = await admin.from("notifications_log").insert({
+        user_id: profile.id,
+        kind: "monthly_summary",
+        payload: { dedupe_key: dedupeKey },
+      });
+      if (logError) continue;
 
-    const { data: resolvedItems } = await admin
-      .from("inventory_items")
-      .select("product_name, value_amount, status")
-      .eq("user_id", profile.id)
-      .in("status", ["consumed", "wasted"])
-      .gte("resolved_at", start)
-      .lt("resolved_at", end);
+      const { data: resolvedItems } = await admin
+        .from("inventory_items")
+        .select("product_name, value_amount, status")
+        .eq("user_id", profile.id)
+        .in("status", ["consumed", "wasted"])
+        .gte("resolved_at", start)
+        .lt("resolved_at", end);
 
-    if (!resolvedItems || resolvedItems.length === 0) continue;
+      if (!resolvedItems || resolvedItems.length === 0) continue;
 
-    const { saved, wasted } = computeMonthlyTotals(resolvedItems);
-    const topWasted = topWastedProducts(resolvedItems);
+      const { saved, wasted } = computeMonthlyTotals(resolvedItems);
+      const topWasted = topWastedProducts(resolvedItems);
 
-    const { data: authUser } = await admin.auth.admin.getUserById(profile.id);
-    const email = authUser?.user?.email;
-    if (!email) continue;
+      const { data: authUser } = await admin.auth.admin.getUserById(profile.id);
+      const email = authUser?.user?.email;
+      if (!email) continue;
 
-    await sendMonthlySummaryEmail({
-      to: email,
-      locale: profile.locale,
-      saved,
-      wasted,
-      currency: profile.currency,
-      topWasted,
-    });
-    sent++;
+      await sendMonthlySummaryEmail({
+        to: email,
+        locale: profile.locale,
+        saved,
+        wasted,
+        currency: profile.currency,
+        topWasted,
+      });
+      sent++;
+    } catch {
+      console.log("monthly summary delivery failed for one profile, continuing");
+    }
   }
 
   return NextResponse.json({ sent });
