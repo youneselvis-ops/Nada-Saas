@@ -94,6 +94,8 @@
     "delete": "Quitar",
     "quantityLabel": "Cantidad",
     "priceLabel": "Precio",
-    "done": "Listo, ir al inventario"
+    "done": "Listo, ir al inventario",
+    "ticketTitle": "Tu ticket",
+    "nonFoodLabel": "artículo no alimentario"
   }
 }

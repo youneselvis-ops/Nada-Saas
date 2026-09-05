@@ -94,6 +94,8 @@
     "delete": "Retirer",
     "quantityLabel": "Quantité",
     "priceLabel": "Prix",
-    "done": "Terminé, voir l'inventaire"
+    "done": "Terminé, voir l'inventaire",
+    "ticketTitle": "Ton ticket",
+    "nonFoodLabel": "article non alimentaire"
   }
 }

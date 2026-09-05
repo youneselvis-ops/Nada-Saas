@@ -1,5 +1,14 @@
 # Journal de bord — NADA
 
+## 2026-09-05 — Composant manquant : le ticket en Martian Mono (section 10)
+En continuant la revue, j'ai vérifié si la charte typographique de la section 10 était vraiment respectée : « Martian Mono exclusivement à l'intérieur du composant qui affiche le ticket extrait ». La police était bien chargée (`layout.tsx`, variable `--font-martian-mono`) et déclarée comme token Tailwind (`font-receipt`), mais **jamais utilisée nulle part** — aucun composant n'affichait le ticket extrait dans son vernaculaire propre. Un vrai manque, pas une simple finition.
+
+**Corrigé :** nouveau composant `src/components/receipt-ticket.tsx` — rendu du ticket extrait (nom du magasin, date, chaque `receipt_item` avec son prix, total) en `font-receipt` (Martian Mono), bordure pointillée façon reçu thermique, astérisque + légende traduite pour les articles non alimentaires. Intégré sur l'écran de revue (`/receipts/[id]/review`), au-dessus de la liste éditable des articles d'inventaire (qui reste en Instrument Sans, comme le reste de l'app). L'écran de revue récupère maintenant aussi le `receipt` et ses `receipt_items` bruts, pas seulement les `inventory_items`.
+
+**Porte qualité :** lint ✅ types ✅ tests ✅ (98/98) build ✅
+
+**Suivant :** continuer à surveiller la PR ; chercher d'autres écarts entre la charte de la section 10 et l'implémentation réelle si le temps le permet.
+
 ## 2026-09-05 — Le déploiement Vercel fonctionnait en réalité (et un vrai déploiement cassé, corrigé)
 Coup de théâtre en lisant les notifications GitHub en attente sur la PR : l'intégration Vercel↔GitHub **fonctionnait depuis le début**. Chaque push sur la branche a bien déclenché un déploiement pour les projets `nada` et `nada-app` (créés lors du diagnostic précédent), avec des statuts « Ready » visibles dans les commentaires automatiques de `vercel[bot]` sur la PR — `https://nada-sigma-two.vercel.app` et `https://nada-app.vercel.app` sont de vraies URL de prévisualisation actives. Le blocage précédemment diagnostiqué (connecteur MCP Vercel en écriture seule, sans lecture) était réel mais concernait uniquement les outils `get_project`/`get_deployment`/etc. utilisés *depuis cette session* — pas l'intégration GitHub elle-même, qui est un mécanisme entièrement séparé côté Vercel et n'a jamais été affectée.
 

@@ -4,25 +4,37 @@ import { useTranslations } from "next-intl";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ReceiptTicket } from "@/components/receipt-ticket";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/database.types";
 
 type InventoryItem = Tables<"inventory_items">;
+type Receipt = Tables<"receipts">;
+type ReceiptItem = Tables<"receipt_items">;
 
 export default function ReviewPage() {
   const t = useTranslations("review");
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [needsReview, setNeedsReview] = useState(false);
+  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
 
     async function load() {
-      const [{ data: receipt }, { data: inventoryItems }] = await Promise.all([
-        supabase.from("receipts").select("status").eq("id", params.id).single(),
+      const [
+        { data: receiptRow },
+        { data: rawItems },
+        { data: inventoryItems },
+      ] = await Promise.all([
+        supabase.from("receipts").select("*").eq("id", params.id).single(),
+        supabase
+          .from("receipt_items")
+          .select("*")
+          .eq("receipt_id", params.id),
         supabase
           .from("inventory_items")
           .select("*, receipt_items!inner(receipt_id)")
@@ -30,7 +42,8 @@ export default function ReviewPage() {
           .order("expires_at", { ascending: true }),
       ]);
 
-      setNeedsReview(receipt?.status === "needs_review");
+      setReceipt(receiptRow ?? null);
+      setReceiptItems(rawItems ?? []);
       setItems((inventoryItems as InventoryItem[]) ?? []);
       setLoading(false);
     }
@@ -52,6 +65,8 @@ export default function ReviewPage() {
 
   if (loading) return null;
 
+  const needsReview = receipt?.status === "needs_review";
+
   return (
     <main className="flex min-h-svh flex-col gap-6 px-4 py-8">
       <div>
@@ -61,6 +76,20 @@ export default function ReviewPage() {
           <p className="mt-2 text-sm text-jamaica">{t("needsReview")}</p>
         ) : null}
       </div>
+
+      {receipt && receiptItems.length > 0 ? (
+        <section>
+          <h2 className="pb-2 text-sm text-fade">{t("ticketTitle")}</h2>
+          <ReceiptTicket
+            storeName={receipt.store_name}
+            purchasedAt={receipt.purchased_at}
+            currency={receipt.currency}
+            totalAmount={receipt.total_amount}
+            items={receiptItems}
+            nonFoodLabel={t("nonFoodLabel")}
+          />
+        </section>
+      ) : null}
 
       {items.length === 0 ? (
         <div>
